@@ -280,7 +280,7 @@ class WernerMeinZuhause extends HTMLElement {
     const en = r ? Object.values(this._energy()).filter((v) => typeof v === 'string' && v.includes('.')) : [];
     const sig = (r ? r.state + JSON.stringify(r.attributes) : '') + ids.concat(en).map((i) => this._h.states[i] && this._h.states[i].state).join('|')
       + (r && this._h.states[r.attributes.person] ? this._h.states[r.attributes.person].state : '')
-      + JSON.stringify(this._ui) + JSON.stringify(this._tests) + JSON.stringify(this._hh || null) + (this._busy ? 'B' : '') + (this._err || '') + (this._log ? this._log.length : -1) + (this._fc ? this._fc.length : 0) + (this._who || '');
+      + JSON.stringify(this._ui) + JSON.stringify(this._tests) + JSON.stringify(this._hh || null) + JSON.stringify(this._src || null) + (this._busy ? 'B' : '') + (this._err || '') + (this._log ? this._log.length : -1) + (this._fc ? this._fc.length : 0) + (this._who || '');
     if (!force && sig === this._sig) return;
     this._sig = sig;
 
@@ -425,6 +425,7 @@ ${sorted.map((o) => { const m = MODES[o] || [o, '']; const on = modeEnt.state ==
   _einstellen() {
     const sub = this._ui.sub; const multi = this._residents().length > 1;
     const tabs = [['wer', 'Wer & wie'], ['wann', 'Wann'], ['sensoren', 'Sensoren'], ['bewohner', 'Bewohner']].map((t) => `<button type="button" role="tab" aria-selected="${sub === t[0]}" class="${sub === t[0] ? 'on' : ''}" data-sub="${t[0]}">${t[1]}</button>`).join('');
+    if (sub === 'sensoren' && (!this._src || this._srcFor !== this._r.attributes.entry_id)) this._loadSources();
     const body = sub === 'wann' ? this._wann() : sub === 'sensoren' ? this._sensoren() : sub === 'bewohner' ? this._bewohner() : this._wer();
     return `<h1>Werner einstellen</h1><div class="muted">${multi ? 'Das sind Ihre Einstellungen, ' + esc(this._r.attributes.resident) + '. Nur Sie sehen und ändern sie.' : 'Sie bestimmen, wer wie und wann informiert wird.'}</div>
 <button type="button" class="btn" style="min-height:52px;color:${C.blue}" data-act="info">So funktioniert Werner</button>
@@ -475,26 +476,17 @@ ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" da
       const on = d.sw ? this._on(d.sw) : true; const v = d.num ? this._num(d.num) : null;
       return `<div class="card" style="padding:14px 16px"><div class="between"><span class="t-m">${esc(d.title)}</span>${d.sw ? `<button type="button" class="sw ${on ? 'on' : ''}" role="switch" aria-checked="${on}" aria-label="${esc(d.title)}" data-toggle="${d.sw}"><span></span></button>` : ''}</div>
 <div class="txt">${esc(d.text)}</div>${d.num ? `<div class="row" style="gap:10px"><button type="button" class="pm" aria-label="Weniger" data-step="${d.num}|-1" ${on ? '' : 'disabled'}>–</button><span class="val">${on ? esc(d.fmt(v == null ? '–' : Math.round(v))) : 'aus'}</span><button type="button" class="pm" aria-label="Mehr" data-step="${d.num}|1" ${on ? '' : 'disabled'}>+</button></div>` : `<div class="val">${on ? d.fmt() : 'aus'}</div>`}</div>`;
-    }).join('') + `<div class="small">Ist Ihr Handy unterwegs oder Werner pausiert, gelten diese Regeln nicht.${(this._r.attributes.sources || []).length ? '' : ' Die Regeln arbeiten erst, wenn Ihr Helfer eine Aktivitätsquelle eingerichtet hat.'}</div>`;
+    }).join('') + `<div class="small">Ist Ihr Handy unterwegs oder Werner pausiert, gelten diese Regeln nicht.${(this._r.attributes.sources || []).length ? '' : ' Die Regeln arbeiten erst, wenn Sie unter „Sensoren“ mindestens ein Gerät gewählt haben.'}</div>`;
   }
 
   _sensoren() {
-    const r = this._r; const sources = r.attributes.sources || [];
+    const r = this._r;
     const p = this._h.states[r.attributes.person];
     const home = p ? p.state === 'home' : false;
     const card = (title, text, badge, ok, toggle) => `<div class="card" style="padding:14px 16px;gap:6px"><div class="between"><span class="t-m">${esc(title)}</span>${toggle || ''}</div><div style="font-size:15px;line-height:1.4;color:#3E4541">${esc(text)}</div><span class="badge ${ok === true ? 'ok' : ok === false ? 'warn' : 'grey'}">${esc(badge)}</span></div>`;
     let html = `<div class="txt">Woran Werner Ihren Tag erkennt.</div>`;
     html += card('Ihr Handy: zu Hause oder unterwegs', 'Sind Sie unterwegs, schweigt Werner.', p ? (home ? 'Gerade: zu Hause' : 'Gerade: unterwegs') : 'Nicht verbunden', p ? true : false);
-    if (sources.length) {
-      for (const id of sources) {
-        const s = this._h.states[id];
-        const name = s ? (s.attributes.friendly_name || id) : id;
-        const okState = s && !BAD.includes(s.state);
-        html += card(name, 'Zeigt Werner, dass Sie aktiv sind.', okState ? 'Vorhanden' : 'Nicht erreichbar', !!okState);
-      }
-    } else {
-      html += `<div class="box warn"><div class="txt">Noch keine Aktivitätsquelle wie Stromzähler oder Bewegungsmelder. Das richtet Ihr Helfer ein.</div></div>`;
-    }
+    html += this._sourcesBlock();
     for (const [key, title, text] of [['consent_camera', 'Kamera', 'Erkennt nur, wer unterwegs ist: Sie, Besuch oder ein Tier. Werner speichert keine Bilder.'], ['consent_microphone', 'Mikrofon', 'Erkennt nur Geräusche wie einen Sturz oder einen Hilferuf. Werner speichert keine Töne.']]) {
       const on = this._on(key);
       html += card(title, text, on ? 'An – mit Ihrer Zustimmung' : 'Aus – nur mit Ihrer Zustimmung', on ? true : null,
@@ -508,6 +500,40 @@ ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" da
   _phoneSelect(field, current, label) {
     const phones = (this._hh && this._hh.phones) || [];
     return `<label class="f">${label || 'Mein Handy (dort fragt Werner nach)'}<select data-f="${field}"><option value="">– kein Handy –</option>${phones.map((s) => `<option value="${esc(s)}" ${current === s ? 'selected' : ''}>${esc(s.replace('mobile_app_', '').replace(/_/g, ' '))}</option>`).join('')}</select></label>`;
+  }
+  async _loadSources() {
+    const id = this._r.attributes.entry_id; this._srcFor = id; this._src = this._src || null;
+    try { this._src = await this._h.callWS({ type: 'werner/sources', entry_id: id }); } catch (err) { this._src = { error: err.message || String(err) }; }
+    this._render(true);
+  }
+  async _saveSources(chosen, baseload) {
+    const msg = { type: 'werner/resident/sources', entry_id: this._r.attributes.entry_id, sources: chosen };
+    if (baseload != null) msg.baseload_w = baseload;
+    try { await this._h.callWS(msg); this._err = null; } catch (err) { this._err = err.message || String(err); }
+    await this._loadSources();
+  }
+  _sourcesBlock() {
+    const s = this._src;
+    if (!s) return '<div class="muted">Geräte werden gesucht …</div>';
+    if (s.error) return `<div class="box err"><div class="txt">${esc(s.error)}</div></div>`;
+    const groups = [['strom', 'Stromverbrauch', 'Wasserkocher, Herd oder Fernseher zeigen Ihren Tagesrhythmus.'], ['bewegung', 'Bewegung und Türen', 'Funksensoren ohne Kamera, zum Beispiel im Flur oder Bad.'], ['geraete', 'Fernseher und Musik', 'Wenn Sie ein- oder ausschalten.'], ['andere', 'Weitere', 'Vom Helfer eingetragen.']];
+    const chosen = new Set(s.chosen);
+    let html = `<section class="card" aria-label="Woran Werner Aktivität erkennt"><div class="t-m">Woran Werner merkt, dass Sie aktiv sind</div><div class="small">Sie bestimmen selbst, worauf Werner achtet. Werner merkt sich nur, <b>dass</b> sich etwas tut – nicht was.</div>`;
+    let any = false;
+    for (const [g, title, text] of groups) {
+      const items = s.candidates.filter((c) => c.group === g);
+      if (!items.length) continue; any = true;
+      html += `<div style="border-top:1px solid #EFEBE2;padding-top:10px;display:flex;flex-direction:column;gap:8px"><div><div style="font-size:17px;font-weight:700">${title}</div><div class="small">${text}</div></div>`;
+      html += items.map((c) => { const on = chosen.has(c.entity_id); const val = BAD.includes(c.state) ? 'nicht erreichbar' : c.group === 'strom' ? fmtW(c.state) : ''; return `<div class="between"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:16px">${esc(c.name)}</span>${val ? `<span class="small">${esc(val)}</span>` : ''}</span><button type="button" class="sw ${on ? 'on' : ''}" role="switch" aria-checked="${on}" aria-label="${esc(c.name)}" data-src="${esc(c.entity_id)}"><span></span></button></div>`; }).join('');
+      html += '</div>';
+    }
+    if (!any) html += `<div class="box warn"><div class="txt">Werner hat keine passenden Geräte gefunden. Ein Helfer kann einen Stromzähler oder Bewegungsmelder anschließen – auswählen können Sie ihn dann hier selbst.</div></div>`;
+    if (s.candidates.some((c) => c.group === 'strom' && chosen.has(c.entity_id))) {
+      const b = Math.round(Number(s.baseload_w) || 0);
+      html += `<div style="border-top:1px solid #EFEBE2;padding-top:10px;display:flex;flex-direction:column;gap:8px"><div style="font-size:17px;font-weight:700">Grundlast</div><div class="small">Bis zu diesem Verbrauch gilt es als still – Kühlschrank und Standby laufen ja immer.</div><div class="row" style="gap:10px"><button type="button" class="pm" aria-label="Weniger" data-base="-50">–</button><span class="val">${b} W</span><button type="button" class="pm" aria-label="Mehr" data-base="50">+</button></div></div>`;
+    }
+    if (!chosen.size) html += `<div class="box warn" style="padding:12px 14px"><div class="txt">Noch nichts gewählt. Dann kann Werner nicht merken, ob es ungewöhnlich still ist.</div></div>`;
+    return html + this._errBox() + '</section>';
   }
   _errBox() { return this._err ? `<div class="box err" style="padding:12px 14px"><div class="txt">${esc(this._err)}</div></div>` : ''; }
   _household(withAdd) {
@@ -714,6 +740,16 @@ ${items.map((x) => `<div style="display:flex;flex-direction:column;gap:2px;borde
       const min = Number(s.attributes.min); const max = Number(s.attributes.max);
       this._call('number', 'set_value', { entity_id: id, value: Math.min(max, Math.max(min, v)) });
       return;
+    }
+    if (d.src && this._src && !this._src.error) {
+      const set = new Set(this._src.chosen); if (set.has(d.src)) set.delete(d.src); else set.add(d.src);
+      this._src = Object.assign({}, this._src, { chosen: [...set] }); this._render(true);
+      this._saveSources([...set]); return;
+    }
+    if (d.base && this._src) {
+      const v = Math.min(5000, Math.max(0, Math.round(Number(this._src.baseload_w) || 0) + Number(d.base)));
+      this._src = Object.assign({}, this._src, { baseload_w: v }); this._render(true);
+      clearTimeout(this._baseTO); this._baseTO = setTimeout(() => this._saveSources(this._src.chosen, this._src.baseload_w), 800); return;
     }
     if (d.removeRes) { this._ui.removeId = d.removeRes; this._ui.sheet = 'remove_me'; this._err = null; this._render(true); return; }
     if (d.mode) { this._call('select', 'select_option', { entity_id: this._energy().charge_mode, option: d.mode }); return; }

@@ -19,13 +19,17 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 
 from .const import (
+    CONF_BASELOAD,
     CONF_CONSENT,
     CONF_CREATED_BY,
     CONF_NAME,
     CONF_NOTIFY,
     CONF_PERSON,
+    CONF_SOURCES,
+    DEFAULT_BASELOAD,
     DOMAIN,
     SOURCE_UI,
 )
@@ -42,6 +46,8 @@ def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_update)
     websocket_api.async_register_command(hass, ws_consent)
     websocket_api.async_register_command(hass, ws_remove)
+    websocket_api.async_register_command(hass, ws_sources)
+    websocket_api.async_register_command(hass, ws_set_sources)
 
 
 # ------------------------------------------------------------------ Hilfen
@@ -274,3 +280,112 @@ async def ws_remove(hass: HomeAssistant, connection: websocket_api.ActiveConnect
         return
     await hass.config_entries.async_remove(entry.entry_id)
     connection.send_result(msg["id"], {})
+
+
+# ---------------------------------------------------- Aktivitätsquellen
+
+# Was als Zeichen für Aktivität taugt – in einfachen Gruppen für die Oberfläche.
+MOTION_CLASSES = {"motion", "occupancy", "presence", "door", "opening", "window", "garage_door", "moving", "vibration"}
+
+
+def _source_group(hass: HomeAssistant, entity_id: str) -> str | None:
+    """Gruppe einer möglichen Aktivitätsquelle oder None, wenn sie nicht passt."""
+    state = hass.states.get(entity_id)
+    if state is None:
+        return None
+    domain = entity_id.split(".", 1)[0]
+    device_class = state.attributes.get("device_class")
+    if domain == "sensor" and device_class == "power":
+        return "strom"
+    if domain == "binary_sensor" and device_class in MOTION_CLASSES:
+        return "bewegung"
+    if domain == "media_player":
+        return "geraete"
+    return None
+
+
+def _own_entity(hass: HomeAssistant, entity_id: str) -> bool:
+    entry = er.async_get(hass).async_get(entity_id)
+    return entry is not None and entry.platform == DOMAIN
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): "werner/sources", vol.Required("entry_id"): str}
+)
+@callback
+def ws_sources(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Welche Geräte Werner beachten könnte – und welche der Bewohner gewählt hat."""
+    entry = _entry(hass, msg["entry_id"])
+    if entry is None or not (connection.user.is_admin or _is_own(hass, entry, connection.user.id)):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst sehen.")
+        return
+    chosen = list(entry.options.get(CONF_SOURCES, []))
+    candidates = []
+    for state in hass.states.async_all(["sensor", "binary_sensor", "media_player"]):
+        group = _source_group(hass, state.entity_id)
+        if group is None or _own_entity(hass, state.entity_id):
+            continue
+        candidates.append(
+            {
+                "entity_id": state.entity_id,
+                "name": state.name,
+                "group": group,
+                "state": state.state,
+                "unit": state.attributes.get("unit_of_measurement", ""),
+            }
+        )
+    # Gewählte Quellen, die nicht in die Gruppen passen (vom Helfer eingetragen), trotzdem zeigen.
+    for entity_id in chosen:
+        if not any(c["entity_id"] == entity_id for c in candidates):
+            state = hass.states.get(entity_id)
+            candidates.append(
+                {
+                    "entity_id": entity_id,
+                    "name": state.name if state else entity_id,
+                    "group": "andere",
+                    "state": state.state if state else "unavailable",
+                    "unit": state.attributes.get("unit_of_measurement", "") if state else "",
+                }
+            )
+    candidates.sort(key=lambda c: (c["group"], c["name"].lower()))
+    connection.send_result(
+        msg["id"],
+        {
+            "chosen": chosen,
+            "baseload_w": entry.options.get(CONF_BASELOAD, DEFAULT_BASELOAD),
+            "candidates": candidates,
+        },
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "werner/resident/sources",
+        vol.Required("entry_id"): str,
+        vol.Required("sources"): [str],
+        vol.Optional("baseload_w"): vol.All(vol.Coerce(float), vol.Range(min=0, max=5000)),
+    }
+)
+@callback
+def ws_set_sources(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Der Bewohner bestimmt selbst, worauf Werner achtet."""
+    entry = _entry(hass, msg["entry_id"])
+    if entry is None or not (connection.user.is_admin or _is_own(hass, entry, connection.user.id)):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst ändern.")
+        return
+    already = set(entry.options.get(CONF_SOURCES, []))
+    sources = []
+    for entity_id in dict.fromkeys(msg["sources"]):
+        # Neue Quellen nur aus den passenden Gruppen; Helfer dürfen alles.
+        if entity_id in already or connection.user.is_admin or (
+            _source_group(hass, entity_id) and not _own_entity(hass, entity_id)
+        ):
+            sources.append(entity_id)
+        else:
+            connection.send_error(msg["id"], ERR_INVALID, f"{entity_id} kann Werner nicht beachten.")
+            return
+    options = {**entry.options, CONF_SOURCES: sources}
+    if "baseload_w" in msg:
+        options[CONF_BASELOAD] = msg["baseload_w"]
+    hass.config_entries.async_update_entry(entry, options=options)
+    connection.send_result(msg["id"], {"chosen": sources})

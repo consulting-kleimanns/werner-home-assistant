@@ -136,3 +136,38 @@ async def test_selbst_beenden(hass: HomeAssistant, hass_read_only_user, hass_rea
     assert (await ws.receive_json())["success"]
     await run(hass)
     assert hass.config_entries.async_entries(DOMAIN) == []
+
+
+async def test_quellen_selbst_waehlen(hass: HomeAssistant, hass_admin_user, hass_read_only_user, hass_read_only_access_token, hass_ws_client, notify_erika) -> None:
+    await _haushalt(hass, hass_read_only_user.id)
+    hass.states.async_set("sensor.hausleistung", "250", {"device_class": "power", "unit_of_measurement": "W"})
+    hass.states.async_set("binary_sensor.flur", "off", {"device_class": "motion"})
+    hass.states.async_set("sensor.temperatur", "21", {"device_class": "temperature"})
+    ws = await hass_ws_client(hass, hass_read_only_access_token)
+    await ws.send_json_auto_id({"type": "werner/resident/add", "person": PERSON, "name": "Erika"})
+    assert (await ws.receive_json())["success"]
+    await run(hass)
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+
+    await ws.send_json_auto_id({"type": "werner/sources", "entry_id": entry.entry_id})
+    res = await ws.receive_json()
+    ids = {c["entity_id"] for c in res["result"]["candidates"]}
+    assert {"sensor.hausleistung", "binary_sensor.flur"} <= ids
+    assert "sensor.temperatur" not in ids
+    assert not any(i.startswith(("sensor.werner", "switch.werner")) for i in ids)
+
+    await ws.send_json_auto_id({"type": "werner/resident/sources", "entry_id": entry.entry_id,
+                                "sources": ["sensor.hausleistung", "binary_sensor.flur"], "baseload_w": 200})
+    assert (await ws.receive_json())["success"]
+    await run(hass)
+    assert entry.runtime_data.sources == ["sensor.hausleistung", "binary_sensor.flur"]
+    assert entry.runtime_data.baseload == 200
+
+    # Unpassende Entitäten lehnt Werner ab.
+    await ws.send_json_auto_id({"type": "werner/resident/sources", "entry_id": entry.entry_id, "sources": ["sensor.temperatur"]})
+    assert not (await ws.receive_json())["success"]
+
+    # Ein anderer Benutzer darf Erikas Quellen nicht ändern.
+    other = await hass_ws_client(hass)  # Admin: darf als Helfer
+    await other.send_json_auto_id({"type": "werner/sources", "entry_id": entry.entry_id})
+    assert (await other.receive_json())["success"]
