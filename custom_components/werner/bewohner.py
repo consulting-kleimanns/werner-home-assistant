@@ -27,6 +27,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     ACTION_FALSE_ALARM,
+    ACTIVITY_LOG_MINUTES,
     ACTION_HELP,
     ACTION_NEXT,
     ACTION_OK,
@@ -42,6 +43,9 @@ from .const import (
     DAY_START_HOUR,
     DEFAULT_BASELOAD,
     DEFAULT_SETTINGS,
+    ENERGY_ENTITY_KEYS,
+    CONF_PV_KWP,
+    CONF_VEHICLE_NAME,
     EVENT_NOTIFICATION_ACTION,
     MORNING_FROM_HOUR,
     MORNING_LATEST_HOUR,
@@ -91,6 +95,9 @@ class Bewohner:
         self.person_index: int = 0
         self.last_activity: datetime | None = None
 
+        self.entity_ids: dict[str, str] = {}
+        self._activity_logged: dict[str, datetime] = {}
+
         self._started = False
         self._task: asyncio.Task | None = None
         self._unsubs: list[Callable[[], None]] = []
@@ -107,6 +114,15 @@ class Bewohner:
     def baseload(self) -> float:
         """Grundlast in Watt: erst darüber zählt Strom als Aktivität."""
         return float(self.entry.options.get(CONF_BASELOAD, DEFAULT_BASELOAD))
+
+    @property
+    def energy(self) -> dict[str, Any]:
+        """Optionale Energie- und Auto-Einstellungen für die Oberfläche."""
+        options = self.entry.options
+        data: dict[str, Any] = {key: options.get(key) for key in ENERGY_ENTITY_KEYS}
+        data[CONF_PV_KWP] = options.get(CONF_PV_KWP)
+        data[CONF_VEHICLE_NAME] = options.get(CONF_VEHICLE_NAME)
+        return data
 
     @property
     def busy(self) -> bool:
@@ -136,11 +152,11 @@ class Bewohner:
         """Ins Logbuch schreiben (sichtbar im Protokoll des Dashboards)."""
         _LOGGER.info("%s: %s", self.name, message)
         if self.hass.services.has_service("logbook", "log"):
-            self.hass.async_create_task(
-                self.hass.services.async_call(
-                    "logbook", "log", {"name": "Werner", "message": f"{self.name}: {message}"}
-                )
-            )
+            data = {"name": "Werner", "message": f"{self.name}: {message}"}
+            if status_entity := self.entity_ids.get("status"):
+                # Am Status-Sensor des Bewohners: so zeigt die Oberfläche nur sein Protokoll.
+                data["entity_id"] = status_entity
+            self.hass.async_create_task(self.hass.services.async_call("logbook", "log", data))
 
     @callback
     def _set_status(self, status: str, reason: str | None = None) -> None:
@@ -219,8 +235,9 @@ class Bewohner:
 
     @callback
     def options_updated(self) -> None:
-        """Aktivitätsquellen haben sich geändert."""
+        """Aktivitätsquellen oder Energie-Sensoren haben sich geändert."""
         self._subscribe_sources()
+        self._changed()
 
     # ------------------------------------------------------------- Aktivität
 
@@ -253,7 +270,18 @@ class Bewohner:
         if not self._is_activity(old.state, new.state):
             return
         self.mark_activity()
+        self._log_activity(new.entity_id, new.name)
         self._check_night()
+
+    @callback
+    def _log_activity(self, entity_id: str, label: str) -> None:
+        """Aktivität einer Quelle höchstens alle 30 Minuten ins Protokoll schreiben."""
+        now = dt_util.utcnow()
+        last = self._activity_logged.get(entity_id)
+        if last and now - last < timedelta(minutes=ACTIVITY_LOG_MINUTES):
+            return
+        self._activity_logged[entity_id] = now
+        self.log(f"Aktivität bemerkt: {label}")
 
     def _is_activity(self, old: str, new: str) -> bool:
         """Zahlen (z. B. Leistung in W) zählen nur über der Grundlast."""
@@ -498,6 +526,32 @@ class Bewohner:
         return await self._wait_for_action(
             {take: "take", false_alarm: "false_alarm", nxt: "next"}, CONTACT_WAIT_MINUTES * 60
         )
+
+    async def async_test_person(self, n: int) -> dict[str, Any]:
+        """Test-Nachricht an Vertrauensperson n schicken (Knopf in „Einstellen“)."""
+        person = self.person_settings(n)
+        if not person["name"]:
+            return {"ok": False, "text": "Für diese Person ist noch kein Name eingetragen."}
+        if person["way"] == WAY_OFF:
+            return {"ok": False, "text": "Für diese Person ist „Nicht melden“ gewählt."}
+        if person["way"] != WAY_APP:
+            label = WAY_LABELS.get(person["way"], person["way"])
+            return {"ok": False, "text": f"{label} kommt in einer der nächsten Versionen."}
+        if not person["contact"]:
+            return {"ok": False, "text": "Für diese Person ist kein App-Gerät eingetragen."}
+        sent = await self._notify(
+            person["contact"],
+            "Werner (Test)",
+            f"Test von Werner: {self.name} hat Sie als {n}. Vertrauensperson eingetragen. "
+            "Das ist nur ein Test – es ist alles in Ordnung.",
+        )
+        self.log(f"Test-Nachricht an {person['name']}: {'gesendet' if sent else 'fehlgeschlagen'}.")
+        if sent:
+            return {
+                "ok": True,
+                "text": "An die Home-Assistant-App gesendet. Fragen Sie kurz nach, ob sie angekommen ist.",
+            }
+        return {"ok": False, "text": "Konnte nicht gesendet werden. Stimmt das App-Gerät?"}
 
     async def _wait_for_action(self, actions: dict[str, str], timeout: float) -> str | None:
         """Auf einen Antwortknopf der Home-Assistant-App warten."""

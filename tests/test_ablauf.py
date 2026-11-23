@@ -46,8 +46,8 @@ async def test_entitaeten_angelegt(hass: HomeAssistant, entry, notify_erika) -> 
     states = hass.states.async_all()
     werner = [s for s in states if s.entity_id.split(".")[0] in (
         "sensor", "switch", "number", "text", "select", "button") and s.entity_id != "sensor.hausleistung"]
-    # 2 Sensoren, 4 Schalter, 3 Zahlen, 12 Texte, 3 Auswahlen, 2 Knöpfe
-    assert len(werner) == 26
+    # 2 Sensoren, 6 Schalter, 3 Zahlen, 12 Texte, 3 Auswahlen, 2 Knöpfe
+    assert len(werner) == 28
     status = [s for s in werner if s.attributes.get("device_class") == "enum"]
     assert status and status[0].state == STATUS_OK
 
@@ -163,3 +163,58 @@ async def test_knopf_alles_gut_beendet_nachfrage(hass: HomeAssistant, entry, not
     await run(hass)
     assert bewohner.status == STATUS_OK
     assert not bewohner.busy
+
+
+async def test_attribute_fuer_oberflaeche(hass: HomeAssistant, entry, notify_erika) -> None:
+    await _setup(hass, entry)
+    status_id = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_status")
+    attrs = hass.states.get(status_id).attributes
+    assert attrs["resident"] == "Erika"
+    assert attrs["entry_id"] == entry.entry_id
+    assert attrs["person"] == PERSON
+    assert attrs["sources"] == ["sensor.hausleistung"]
+    # Alle 28 Entitäten sind für die Oberfläche auffindbar.
+    assert len(attrs["entities"]) == 28
+    assert attrs["entities"]["status"] == status_id
+    assert attrs["entities"]["person_2_way"].startswith("select.")
+
+
+async def test_dienst_test_person(hass: HomeAssistant, entry, notify_erika, notify_sabine) -> None:
+    bewohner = await _setup(hass, entry)
+    response = await hass.services.async_call(
+        DOMAIN, "test_person", {"config_entry_id": entry.entry_id, "person": 1},
+        blocking=True, return_response=True,
+    )
+    assert response["ok"] is False  # noch niemand eingetragen
+
+    _sabine_eintragen(bewohner)
+    response = await hass.services.async_call(
+        DOMAIN, "test_person", {"config_entry_id": entry.entry_id, "person": 1},
+        blocking=True, return_response=True,
+    )
+    assert response["ok"] is True
+    assert len(notify_sabine) == 1
+    assert "Test" in notify_sabine[0].data["title"]
+
+
+async def test_dienst_nachfragen(hass: HomeAssistant, entry, notify_erika) -> None:
+    bewohner = await _setup(hass, entry)
+    await hass.services.async_call(
+        DOMAIN, "ask", {"config_entry_id": entry.entry_id, "reason": "Probe."}, blocking=True
+    )
+    await run(hass)
+    assert bewohner.status == STATUS_ASKING
+    assert "Probe." in notify_erika[0].data["message"]
+
+
+async def test_aktivitaet_im_protokoll(hass: HomeAssistant, entry, notify_erika) -> None:
+    bewohner = await _setup(hass, entry)
+    logged = []
+    bewohner.log = logged.append  # type: ignore[method-assign]
+    hass.states.async_set("sensor.hausleistung", "2000")
+    await hass.async_block_till_done()
+    hass.states.async_set("sensor.hausleistung", "100")
+    hass.states.async_set("sensor.hausleistung", "2100")
+    await hass.async_block_till_done()
+    # Höchstens ein Eintrag je Quelle in 30 Minuten
+    assert len([m for m in logged if m.startswith("Aktivität bemerkt")]) == 1

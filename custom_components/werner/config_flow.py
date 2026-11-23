@@ -17,10 +17,19 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_BASELOAD,
+    CONF_BATTERY_SOC,
+    CONF_CHARGE_MODE,
+    CONF_GRID_ENERGY,
+    CONF_GRID_POWER,
     CONF_NAME,
     CONF_NOTIFY,
     CONF_PERSON,
+    CONF_PV_KWP,
+    CONF_PV_POWER,
     CONF_SOURCES,
+    CONF_VEHICLE_NAME,
+    CONF_VEHICLE_SOC,
+    CONF_WEATHER,
     DEFAULT_BASELOAD,
     DOMAIN,
 )
@@ -86,14 +95,17 @@ class WernerConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class WernerOptionsFlow(OptionsFlow):
-    """Woran Werner die Aktivität dieses Bewohners erkennt."""
+    """Woran Werner Aktivität erkennt – und freiwillig Energie und Auto."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Aktivitätsquellen und Grundlast einstellen."""
+        """Aktivitätsquellen, Grundlast sowie Energie- und Auto-Sensoren einstellen."""
         if user_input is not None:
             return self.async_create_entry(data=user_input)
+
+        def entity(domain: str | list[str]) -> selector.EntitySelector:
+            return selector.EntitySelector(selector.EntitySelectorConfig(domain=domain))
 
         options = self.config_entry.options
         schema = vol.Schema(
@@ -117,6 +129,23 @@ class WernerOptionsFlow(OptionsFlow):
                         mode=selector.NumberSelectorMode.BOX,
                     )
                 ),
+                vol.Optional(CONF_WEATHER): entity("weather"),
+                vol.Optional(CONF_GRID_POWER): entity("sensor"),
+                vol.Optional(CONF_GRID_ENERGY): entity("sensor"),
+                vol.Optional(CONF_PV_POWER): entity("sensor"),
+                vol.Optional(CONF_PV_KWP): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0, max=30, step=0.1, unit_of_measurement="kWp",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Optional(CONF_BATTERY_SOC): entity("sensor"),
+                vol.Optional(CONF_VEHICLE_NAME): selector.TextSelector(),
+                vol.Optional(CONF_VEHICLE_SOC): entity("sensor"),
+                vol.Optional(CONF_CHARGE_MODE): entity(["select", "input_select"]),
             }
         )
-        return self.async_show_form(step_id="init", data_schema=schema)
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(schema, dict(options)),
+        )

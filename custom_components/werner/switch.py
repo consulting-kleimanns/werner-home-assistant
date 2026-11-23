@@ -13,7 +13,14 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from . import WernerConfigEntry
 from .entity import WernerEntity
 
-KEYS = ("paused", "rule_morning", "rule_quiet", "rule_night")
+KEYS = (
+    "paused",
+    "rule_morning",
+    "rule_quiet",
+    "rule_night",
+    "consent_camera",
+    "consent_microphone",
+)
 
 
 async def async_setup_entry(

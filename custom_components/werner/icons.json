@@ -20,6 +20,12 @@
       },
       "rule_night": {
         "default": "mdi:weather-night"
+      },
+      "consent_camera": {
+        "default": "mdi:cctv"
+      },
+      "consent_microphone": {
+        "default": "mdi:microphone"
       }
     },
     "number": {
@@ -59,6 +65,14 @@
       "help": {
         "default": "mdi:hand-back-left"
       }
+    }
+  },
+  "services": {
+    "test_person": {
+      "service": "mdi:message-check-outline"
+    },
+    "ask": {
+      "service": "mdi:account-question"
     }
   }
 }

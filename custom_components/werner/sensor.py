@@ -30,6 +30,10 @@ class StatusSensor(WernerEntity, SensorEntity, RestoreEntity):
 
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_options = STATUSES
+    # Wird von der Oberfläche gelesen, gehört aber nicht in die Datenbank.
+    _unrecorded_attributes = frozenset(
+        {"entities", "sources", "baseload_w", "energy", "person", "resident", "notify", "entry_id"}
+    )
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -43,10 +47,19 @@ class StatusSensor(WernerEntity, SensorEntity, RestoreEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
+        b = self.bewohner
         return {
-            "reason": self.bewohner.reason,
-            "procedure": self.bewohner.procedure,
-            "person_index": self.bewohner.person_index,
+            "reason": b.reason,
+            "procedure": b.procedure,
+            "person_index": b.person_index,
+            "resident": b.name,
+            "entry_id": b.entry.entry_id,
+            "person": b.person,
+            "notify": bool(b.notify),
+            "entities": dict(b.entity_ids),
+            "sources": b.sources,
+            "baseload_w": b.baseload,
+            "energy": b.energy,
         }
 
 
