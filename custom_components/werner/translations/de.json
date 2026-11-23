@@ -21,5 +21,96 @@
     "abort": {
       "already_configured": "Diese Person ist in Werner schon eingerichtet."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Woran Werner Aktivität erkennt",
+        "description": "Wählen Sie, woran man sieht, dass der Bewohner aktiv ist, z. B. Stromzähler, Bewegungsmelder oder Tablet. Die Regeln arbeiten erst, wenn mindestens eine Quelle gewählt ist.",
+        "data": {
+          "activity_sources": "Aktivitätsquellen",
+          "baseload_w": "Grundlast"
+        },
+        "data_description": {
+          "activity_sources": "Jede Änderung zählt als Aktivität. Bei Zahlen wie der Leistung zählt nur ein Anstieg über die Grundlast.",
+          "baseload_w": "Strom, der immer läuft (Kühlschrank, Standby). Erst mehr zählt als Aktivität."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "ok": "Alles in Ordnung",
+          "asking": "Fragt nach",
+          "informed": "Vertrauensperson informiert",
+          "help": "Hilfe angefordert",
+          "paused": "Pausiert"
+        }
+      },
+      "last_activity": {
+        "name": "Letzte Aktivität"
+      }
+    },
+    "switch": {
+      "paused": {
+        "name": "Pausiert"
+      },
+      "rule_morning": {
+        "name": "Regel: Morgens nichts los"
+      },
+      "rule_quiet": {
+        "name": "Regel: Tagsüber lange still"
+      },
+      "rule_night": {
+        "name": "Regel: Nachts ungewöhnlich aktiv"
+      }
+    },
+    "number": {
+      "morning_until": {
+        "name": "Morgens bis Uhr"
+      },
+      "quiet_hours": {
+        "name": "Ruhe-Stunden"
+      },
+      "wait_minutes": {
+        "name": "Wartezeit auf Antwort"
+      }
+    },
+    "text": {
+      "person_name": {
+        "name": "Person {n} Name"
+      },
+      "person_contact": {
+        "name": "Person {n} App-Gerät"
+      },
+      "person_phone": {
+        "name": "Person {n} Handynummer"
+      },
+      "person_e_mail": {
+        "name": "Person {n} E-Mail"
+      }
+    },
+    "select": {
+      "person_way": {
+        "name": "Person {n} Weg",
+        "state": {
+          "off": "Aus",
+          "ha_app": "Home-Assistant-App",
+          "signal": "Signal",
+          "e_mail": "E-Mail"
+        }
+      }
+    },
+    "button": {
+      "all_good": {
+        "name": "Alles gut"
+      },
+      "help": {
+        "name": "Ich brauche Hilfe"
+      }
+    }
   }
 }

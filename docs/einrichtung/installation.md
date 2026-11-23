@@ -96,7 +96,22 @@ Der Assistent fragt je Bewohner:
 
 Für jeden weiteren Bewohner Werner noch einmal hinzufügen.
 
-> **In Arbeit:** Weitere Schritte des Assistenten – Aktivitätsquellen, Vertrauenspersonen, Wege, Tests – und das automatisch angelegte Dashboard „Mein Zuhause“ folgen in den nächsten Versionen.
+Danach gibt es für den Bewohner ein Gerät **„Werner · Erika“** (Einstellungen › Geräte & Dienste › Werner) mit allen Einstellungen und Knöpfen.
+
+### Aktivitätsquellen einstellen
+
+Einstellungen › Geräte & Dienste › Werner › beim Bewohner **Konfigurieren**:
+
+- **Aktivitätsquellen:** z. B. der Leistungssensor des Stromzählers, Bewegungsmelder, das Tablet. Jede Änderung zählt als Aktivität.
+- **Grundlast:** Strom, der immer läuft (Kühlschrank, Standby), z. B. 300 W. Bei Zahlen zählt nur ein Anstieg über die Grundlast.
+
+Die Regeln „Morgens nichts los“ und „Tagsüber lange still“ arbeiten erst, wenn mindestens eine Quelle gewählt ist – sonst gäbe es Fehlalarme.
+
+### Vertrauenspersonen eintragen
+
+Am Gerät des Bewohners für Person 1 bis 3: **Name**, **Weg** und beim Weg Home-Assistant-App das **App-Gerät** (z. B. `mobile_app_sabines_handy`). Die Vertrauensperson braucht dafür die Home-Assistant-App mit einem eigenen Konto in diesem Home Assistant.
+
+> **In Arbeit:** Die Wege Signal und E-Mail in der Integration, weitere Schritte des Assistenten und das automatisch angelegte Dashboard „Mein Zuhause“. Bis dahin überspringt Werner Personen mit Signal oder E-Mail und schreibt das ins Protokoll.
 
 ### Woran Werner Aktivität erkennt
 

@@ -6,10 +6,24 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
+from homeassistant.core import callback
 from homeassistant.helpers import selector
 
-from .const import CONF_NAME, CONF_NOTIFY, CONF_PERSON, DOMAIN
+from .const import (
+    CONF_BASELOAD,
+    CONF_NAME,
+    CONF_NOTIFY,
+    CONF_PERSON,
+    CONF_SOURCES,
+    DEFAULT_BASELOAD,
+    DOMAIN,
+)
 
 NOTIFY_PREFIX = "notify."
 
@@ -18,6 +32,12 @@ class WernerConfigFlow(ConfigFlow, domain=DOMAIN):
     """Bewohner hinzufügen."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> WernerOptionsFlow:
+        """Optionen: Aktivitätsquellen und Grundlast."""
+        return WernerOptionsFlow()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -63,3 +83,40 @@ class WernerConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user", data_schema=schema, errors=errors
         )
+
+
+class WernerOptionsFlow(OptionsFlow):
+    """Woran Werner die Aktivität dieses Bewohners erkennt."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Aktivitätsquellen und Grundlast einstellen."""
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+
+        options = self.config_entry.options
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_SOURCES, default=list(options.get(CONF_SOURCES, []))
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain=["sensor", "binary_sensor", "device_tracker", "media_player", "light", "switch"],
+                        multiple=True,
+                    )
+                ),
+                vol.Required(
+                    CONF_BASELOAD, default=options.get(CONF_BASELOAD, DEFAULT_BASELOAD)
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=5000,
+                        step=10,
+                        unit_of_measurement="W",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)

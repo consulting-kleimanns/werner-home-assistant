@@ -1,0 +1,64 @@
+{
+  "entity": {
+    "sensor": {
+      "status": {
+        "default": "mdi:shield-account"
+      },
+      "last_activity": {
+        "default": "mdi:clock-check-outline"
+      }
+    },
+    "switch": {
+      "paused": {
+        "default": "mdi:pause-circle-outline"
+      },
+      "rule_morning": {
+        "default": "mdi:weather-sunset-up"
+      },
+      "rule_quiet": {
+        "default": "mdi:sleep"
+      },
+      "rule_night": {
+        "default": "mdi:weather-night"
+      }
+    },
+    "number": {
+      "morning_until": {
+        "default": "mdi:clock-outline"
+      },
+      "quiet_hours": {
+        "default": "mdi:timer-outline"
+      },
+      "wait_minutes": {
+        "default": "mdi:timer-sand"
+      }
+    },
+    "text": {
+      "person_name": {
+        "default": "mdi:account-heart"
+      },
+      "person_contact": {
+        "default": "mdi:cellphone-message"
+      },
+      "person_phone": {
+        "default": "mdi:phone"
+      },
+      "person_e_mail": {
+        "default": "mdi:email-outline"
+      }
+    },
+    "select": {
+      "person_way": {
+        "default": "mdi:message-arrow-right-outline"
+      }
+    },
+    "button": {
+      "all_good": {
+        "default": "mdi:check-circle-outline"
+      },
+      "help": {
+        "default": "mdi:hand-back-left"
+      }
+    }
+  }
+}

@@ -3,7 +3,10 @@
 ## 0.2.0 – unveröffentlicht
 Erster Schritt zur Werner-Integration, die das YAML-Paket später ersetzt.
 - Installation über HACS (als benutzerdefiniertes Repository) mit den Knöpfen „In HACS öffnen“ und „Werner hinzufügen“ im README.
-- Integration `werner`: Einrichtungs-Assistent legt je Bewohner einen Eintrag an (Name, Person, Handy). Die Warnlogik folgt.
+- Integration `werner`: Einrichtungs-Assistent legt je Bewohner einen Eintrag an (Name, Person, Handy).
+- Warnlogik in der Integration: je Bewohner ein Gerät mit Status, letzter Aktivität, Pause, Regeln, Wartezeit, drei Vertrauenspersonen und den Knöpfen „Alles gut“ und „Ich brauche Hilfe“. Werner fragt zuerst den Bewohner und informiert dann die Vertrauenspersonen nacheinander per Home-Assistant-App (Antwort 1/2/3). Ein laufender Ablauf geht nach einem Neustart weiter. Signal und E-Mail folgen.
+- Optionen je Bewohner: Aktivitätsquellen und Grundlast in Watt.
+- Tests mit pytest-homeassistant-custom-component.
 - Anleitungen: Installation für Helfer (inkl. „Warum nicht WhatsApp oder Threema?“), Datenschutz.
 - Automatische Prüfung mit hassfest.
 
