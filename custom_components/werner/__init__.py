@@ -26,6 +26,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
 from .bewohner import Bewohner
+from .websocket import async_register_commands
 from .const import (
     ATTR_CONFIG_ENTRY_ID,
     ATTR_PERSON,
@@ -68,6 +69,7 @@ SCHEMA_ASK = vol.Schema(
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Oberfläche und Dienste einmal für alle Bewohner anmelden."""
     await _async_register_frontend(hass)
+    async_register_commands(hass)
 
     def _bewohner(call: ServiceCall) -> Bewohner:
         entry = hass.config_entries.async_get_entry(call.data[ATTR_CONFIG_ENTRY_ID])
