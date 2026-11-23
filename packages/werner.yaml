@@ -1,0 +1,747 @@
+# Werner – Home-Assistant-Package (Version 0.1.0)
+# https://github.com/consulting-kleimanns/werner-home-assistant  ·  Lizenz: MIT
+#
+# Einbinden (configuration.yaml):
+#   homeassistant:
+#     packages: !include_dir_named packages
+# und diese Datei nach /config/packages/werner.yaml kopieren.
+#
+# VOR DEM START ANPASSEN – diese Platzhalter durch die echten Entity-IDs ersetzen:
+#   person.bewohner                       -> Person des Bewohners
+#   notify.mobile_app_bewohner_handy      -> HA-App auf dem Handy des Bewohners
+#   sensor.bewohner_handy_battery_state   -> Ladezustand-Sensor des Handys
+#   binary_sensor.bewohner_handy_focus    -> Fokus-Sensor des Handys (iPhone)
+# Danach den Namen des Bewohners in input_text.werner_bewohner_name eintragen.
+#
+# Voraussetzungen: HA-App „Signal Messenger“ (Repository haberda/hassio_addons, Modus json-rpc)
+# für Signal; /config/werner/werner_mail.py für E-Mail.
+#
+# Hinweis: automation.werner_regeln_prufen erst einschalten, wenn eine verlässliche
+# Aktivitätsquelle angebunden ist (z. B. Hausstromverbrauch). Werner ist kein Hausnotruf.
+
+input_text:
+  werner_bewohner_name:
+    name: Werner Bewohner Name
+    max: 50
+    icon: mdi:account
+  werner_person_1_name:
+    name: Werner Person 1 Name
+    max: 100
+    icon: mdi:account-heart
+  werner_person_1_telefon:
+    name: Werner Person 1 Telefon
+    max: 100
+    icon: mdi:phone
+  werner_person_1_e_mail:
+    name: Werner Person 1 E-Mail
+    max: 100
+    icon: mdi:email
+  werner_person_1_kontakt:
+    name: Werner Person 1 Gerät HA-App
+    max: 100
+    icon: mdi:cellphone
+  werner_person_2_name:
+    name: Werner Person 2 Name
+    max: 100
+    icon: mdi:account-heart
+  werner_person_2_telefon:
+    name: Werner Person 2 Telefon
+    max: 100
+    icon: mdi:phone
+  werner_person_2_e_mail:
+    name: Werner Person 2 E-Mail
+    max: 100
+    icon: mdi:email
+  werner_person_2_kontakt:
+    name: Werner Person 2 Gerät HA-App
+    max: 100
+    icon: mdi:cellphone
+  werner_person_3_name:
+    name: Werner Person 3 Name
+    max: 100
+    icon: mdi:account-heart
+  werner_person_3_telefon:
+    name: Werner Person 3 Telefon
+    max: 100
+    icon: mdi:phone
+  werner_person_3_e_mail:
+    name: Werner Person 3 E-Mail
+    max: 100
+    icon: mdi:email
+  werner_person_3_kontakt:
+    name: Werner Person 3 Gerät HA-App
+    max: 100
+    icon: mdi:cellphone
+  werner_mail_server:
+    name: Werner Mail Server
+    max: 100
+    icon: mdi:email-fast-outline
+  werner_mail_benutzer:
+    name: Werner Mail Benutzer
+    max: 100
+    icon: mdi:account
+  werner_mail_passwort:
+    name: Werner Mail Passwort
+    max: 100
+    mode: password
+    icon: mdi:form-textbox-password
+input_select:
+  werner_status:
+    name: Werner Status
+    options:
+    - Alles in Ordnung
+    - Fragt nach
+    - Vertrauensperson informiert
+    - Hilfe angefordert
+    - Pausiert
+    icon: mdi:shield-account
+  werner_person_1_weg:
+    name: Werner Person 1 Weg
+    options:
+    - Aus
+    - Home-Assistant-App
+    - Signal
+    - SMS
+    icon: mdi:message-arrow-right
+  werner_person_2_weg:
+    name: Werner Person 2 Weg
+    options:
+    - Aus
+    - Home-Assistant-App
+    - Signal
+    - SMS
+    icon: mdi:message-arrow-right
+  werner_person_3_weg:
+    name: Werner Person 3 Weg
+    options:
+    - Aus
+    - Home-Assistant-App
+    - Signal
+    - SMS
+    icon: mdi:message-arrow-right
+  werner_mail_verschluesselung:
+    name: Werner Mail Verschlüsselung
+    options:
+    - STARTTLS
+    - SSL/TLS
+    icon: mdi:lock
+input_boolean:
+  werner_pausiert:
+    name: Werner pausiert
+    icon: mdi:pause-circle
+  werner_regel_morgens_nichts_los:
+    name: Werner Regel Morgens nichts los
+    icon: mdi:weather-sunset-up
+  werner_regel_tagsuber_lange_still:
+    name: Werner Regel Tagsüber lange still
+    icon: mdi:sleep
+  werner_regel_nachts_ungewohnlich_aktiv:
+    name: Werner Regel Nachts ungewöhnlich aktiv
+    icon: mdi:weather-night
+input_number:
+  werner_morgens_bis_uhr:
+    name: Werner Morgens bis Uhr
+    min: 7
+    max: 12
+    step: 1
+    icon: mdi:clock-outline
+  werner_ruhe_stunden:
+    name: Werner Ruhe Stunden
+    min: 2
+    max: 8
+    step: 1
+    icon: mdi:timer-sand
+  werner_wartezeit_minuten:
+    name: Werner Wartezeit Minuten
+    min: 5
+    max: 30
+    step: 5
+    icon: mdi:timer-outline
+  werner_mail_port:
+    name: Werner Mail Port
+    min: 1
+    max: 65535
+    step: 1
+    mode: box
+    icon: mdi:numeric
+input_datetime:
+  werner_pause_bis:
+    name: Werner Pause bis
+    has_date: true
+    has_time: true
+    icon: mdi:calendar-clock
+  werner_letzte_aktivitat:
+    name: Werner letzte Aktivität
+    has_date: true
+    has_time: true
+    icon: mdi:history
+counter:
+  werner_signal_qr:
+    name: Werner Signal QR
+    icon: mdi:qrcode
+template:
+- image:
+  - name: Werner Signal QR-Code
+    unique_id: werner_signal_qr_code
+    url: http://1315902c-signal-messenger:8080/v1/qrcodelink?device_name=Werner&n={{ states('counter.werner_signal_qr') }}
+rest_command:
+  werner_signal_konten:
+    url: http://1315902c-signal-messenger:8080/v1/accounts
+    method: get
+    timeout: 15
+  werner_signal_senden:
+    url: http://1315902c-signal-messenger:8080/v2/send
+    method: post
+    content_type: application/json
+    timeout: 30
+    payload: '{"message": {{ message | tojson }}, "number": {{ absender | tojson }}, "recipients": [{{ empfaenger | tojson }}]}'
+shell_command:
+  werner_mail_senden: python3 /config/werner/werner_mail.py --server={{ states('input_text.werner_mail_server') | base64_encode }} --port={{ states('input_number.werner_mail_port') | base64_encode }} --user={{ states('input_text.werner_mail_benutzer') | base64_encode }} --password={{ states('input_text.werner_mail_passwort') | base64_encode }} --mode={{ states('input_select.werner_mail_verschluesselung') | base64_encode }} --to={{ an | default('') | base64_encode }} --subject={{ betreff | default('Werner') | base64_encode }} --body={{ text | default('') | base64_encode }}
+script:
+  werner_nachfragen:
+    alias: 'Werner: Beim Bewohner nachfragen'
+    description: Fragt den Bewohner auf dem Handy, ob alles in Ordnung ist. Antwortet er mit 'Ja, alles gut', ist alles erledigt. Bei 'Bitte Hilfe holen' oder ohne Antwort innerhalb der Wartezeit informiert Werner die Vertrauenspersonen (script.werner_eskalieren). Wird nie ausgeführt, wenn Werner pausiert ist.
+    fields:
+      grund:
+        description: Warum Werner nachfragt, in einfachen Worten
+        name: Grund
+        required: true
+        selector:
+          text: null
+    icon: mdi:account-question
+    max_exceeded: silent
+    mode: single
+    sequence:
+    - condition: state
+      entity_id: input_boolean.werner_pausiert
+      note: Pausiert = Werner schweigt vollständig
+      state: 'off'
+    - variables:
+        tag: werner_frage_{{ now().timestamp() | int }}
+        warte: '{{ states(''input_number.werner_wartezeit_minuten'') | int(10) }}'
+    - action: input_select.select_option
+      data:
+        option: Fragt nach
+      target:
+        entity_id: input_select.werner_status
+    - action: logbook.log
+      data:
+        message: 'fragt bei {{ states(''input_text.werner_bewohner_name'') }} nach: {{ grund }}'
+        name: Werner
+    - action: notify.mobile_app_bewohner_handy
+      data:
+        data:
+          actions:
+          - action: WERNER_OK_{{ tag }}
+            title: Ja, alles gut
+          - action: WERNER_HILFE_{{ tag }}
+            destructive: true
+            title: Bitte Hilfe holen
+          push:
+            interruption-level: time-sensitive
+            sound: default
+          tag: '{{ tag }}'
+        message: '{{ grund }} Ohne Antwort informiere ich in {{ warte }} Minuten Ihre Vertrauensperson.'
+        title: 'Werner: Ist alles in Ordnung?'
+    - continue_on_timeout: true
+      note: '''Alles in Ordnung'' kann auch über das Dashboard gesetzt werden'
+      timeout:
+        minutes: '{{ warte }}'
+      wait_for_trigger:
+      - event_data:
+          action: WERNER_OK_{{ tag }}
+        event_type: mobile_app_notification_action
+        id: ok
+        trigger: event
+      - event_data:
+          action: WERNER_HILFE_{{ tag }}
+        event_type: mobile_app_notification_action
+        id: hilfe
+        trigger: event
+      - entity_id: input_select.werner_status
+        id: ok
+        to: Alles in Ordnung
+        trigger: state
+      - entity_id: input_boolean.werner_pausiert
+        id: pause
+        to: 'on'
+        trigger: state
+    - choose:
+      - conditions:
+        - condition: template
+          value_template: '{{ wait.trigger is not none and wait.trigger.id in [''ok'', ''pause''] }}'
+        sequence:
+        - action: input_select.select_option
+          data:
+            option: Alles in Ordnung
+          target:
+            entity_id: input_select.werner_status
+        - action: input_datetime.set_datetime
+          data:
+            datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+          target:
+            entity_id: input_datetime.werner_letzte_aktivitat
+        - action: logbook.log
+          data:
+            message: '{{ states(''input_text.werner_bewohner_name'') }} hat bestätigt: alles gut.'
+            name: Werner
+      - conditions:
+        - condition: template
+          value_template: '{{ wait.trigger is not none and wait.trigger.id == ''hilfe'' }}'
+        sequence:
+        - action: input_select.select_option
+          data:
+            option: Hilfe angefordert
+          target:
+            entity_id: input_select.werner_status
+        - action: logbook.log
+          data:
+            message: '{{ states(''input_text.werner_bewohner_name'') }} hat Hilfe angefordert.'
+            name: Werner
+        - action: script.werner_eskalieren
+          data:
+            grund: '{{ states(''input_text.werner_bewohner_name'') }} hat über Werner um Hilfe gebeten.'
+      default:
+      - action: logbook.log
+        data:
+          message: '{{ states(''input_text.werner_bewohner_name'') }} hat nicht innerhalb von {{ warte }} Minuten geantwortet.'
+          name: Werner
+      - action: script.werner_eskalieren
+        data:
+          grund: '{{ grund }} {{ states(''input_text.werner_bewohner_name'') }} hat auf Werners Nachfrage nicht geantwortet.'
+  werner_eskalieren:
+    alias: 'Werner: Vertrauenspersonen informieren'
+    description: 'Informiert die Vertrauenspersonen des Bewohners nacheinander (Werner Person 1-3). Jede Person hat 15 Minuten Zeit zu antworten. Wege: Home-Assistant-App (mit Antwortknöpfen 1/2/3), Signal, zusätzlich E-Mail.'
+    fields:
+      grund:
+        description: Kurzer Satz, warum Werner Alarm gibt
+        name: Grund
+        required: true
+        selector:
+          text: null
+    icon: mdi:account-alert
+    mode: single
+    sequence:
+    - action: input_select.select_option
+      data:
+        option: Vertrauensperson informiert
+      target:
+        entity_id: input_select.werner_status
+    - repeat:
+        for_each:
+        - 1
+        - 2
+        - 3
+        sequence:
+        - variables:
+            pkontakt: '{{ states(''input_text.werner_person_'' ~ repeat.item ~ ''_kontakt'') }}'
+            pname: '{{ states(''input_text.werner_person_'' ~ repeat.item ~ ''_name'') }}'
+            pweg: '{{ states(''input_select.werner_person_'' ~ repeat.item ~ ''_weg'') }}'
+            tag: werner_{{ repeat.item }}_{{ now().timestamp() | int }}
+        - if:
+          - condition: template
+            value_template: '{{ pname not in ['''', ''unknown'', ''unavailable''] and pweg != ''Aus'' and ''@'' in states(''input_text.werner_person_'' ~ repeat.item ~ ''_e_mail'') }}'
+          then:
+          - action: shell_command.werner_mail_senden
+            continue_on_error: true
+            response_variable: mail
+            data:
+              an: '{{ states(''input_text.werner_person_'' ~ repeat.item ~ ''_e_mail'') }}'
+              betreff: 'Werner: Bitte kümmern Sie sich um {{ states(''input_text.werner_bewohner_name'') }}'
+              text: |-
+                Hallo {{ pname }},
+
+                {{ grund }}
+
+                Sie sind die {{ repeat.item }}. Vertrauensperson von {{ states('input_text.werner_bewohner_name') }}. Bitte rufen Sie {{ states('input_text.werner_bewohner_name') }} an oder schauen Sie vorbei.
+                Melden Sie sich nicht innerhalb von 15 Minuten, informiert Werner die nächste Person.
+
+                Im Notfall: 112
+
+                – Werner
+          - action: logbook.log
+            data:
+              name: Werner
+              message: 'E-Mail an {{ pname }}: {{ ''gesendet'' if mail is defined and mail.returncode | default(1) == 0 else ''fehlgeschlagen'' }}'
+        - choose:
+          - conditions:
+            - condition: template
+              value_template: '{{ pname not in ['''', ''unknown'', ''unavailable''] and pweg == ''Home-Assistant-App'' and pkontakt not in ['''', ''unknown'', ''unavailable''] }}'
+            sequence:
+            - action: logbook.log
+              data:
+                message: 'informiert {{ pname }} (Platz {{ repeat.item }}) per Home-Assistant-App: {{ grund }}'
+                name: Werner
+            - action: notify.{{ pkontakt }}
+              data:
+                data:
+                  actions:
+                  - action: WERNER_KUEMMERE_{{ tag }}
+                    title: 1 · Ich kümmere mich
+                  - action: WERNER_FEHLALARM_{{ tag }}
+                    title: 2 · Fehlalarm
+                  - action: WERNER_NAECHSTE_{{ tag }}
+                    title: 3 · Kann nicht
+                  channel: werner_alarm
+                  importance: high
+                  priority: high
+                  push:
+                    interruption-level: time-sensitive
+                  tag: '{{ tag }}'
+                  ttl: 0
+                message: '{{ grund }} Sie sind die {{ repeat.item }}. Vertrauensperson von {{ states(''input_text.werner_bewohner_name'') }}. Bitte antworten Sie.'
+                title: 'Werner: {{ states(''input_text.werner_bewohner_name'') }} antwortet nicht'
+            - continue_on_timeout: true
+              timeout:
+                minutes: 15
+              wait_for_trigger:
+              - event_data:
+                  action: WERNER_KUEMMERE_{{ tag }}
+                event_type: mobile_app_notification_action
+                id: kuemmere
+                trigger: event
+              - event_data:
+                  action: WERNER_FEHLALARM_{{ tag }}
+                event_type: mobile_app_notification_action
+                id: fehlalarm
+                trigger: event
+              - event_data:
+                  action: WERNER_NAECHSTE_{{ tag }}
+                event_type: mobile_app_notification_action
+                id: naechste
+                trigger: event
+            - choose:
+              - conditions:
+                - condition: template
+                  value_template: '{{ wait.trigger is not none and wait.trigger.id == ''kuemmere'' }}'
+                sequence:
+                - action: logbook.log
+                  data:
+                    message: '{{ pname }} kümmert sich.'
+                    name: Werner
+                - action: notify.mobile_app_bewohner_handy
+                  data:
+                    message: '{{ pname }} weiß Bescheid und kümmert sich.'
+                    title: Werner
+                - stop: Vertrauensperson kümmert sich
+              - conditions:
+                - condition: template
+                  value_template: '{{ wait.trigger is not none and wait.trigger.id == ''fehlalarm'' }}'
+                sequence:
+                - action: logbook.log
+                  data:
+                    message: '{{ pname }}: Fehlalarm, alles gut.'
+                    name: Werner
+                - action: input_select.select_option
+                  data:
+                    option: Alles in Ordnung
+                  target:
+                    entity_id: input_select.werner_status
+                - stop: Fehlalarm
+              default:
+              - action: logbook.log
+                data:
+                  message: '{{ pname }} hat nicht geantwortet oder kann nicht – nächste Person.'
+                  name: Werner
+          - conditions:
+            - condition: template
+              value_template: '{{ pname not in ['''', ''unknown'', ''unavailable''] and pweg == ''Signal'' and states(''input_text.werner_person_'' ~ repeat.item ~ ''_telefon'') not in ['''', ''unknown'', ''unavailable''] }}'
+            sequence:
+            - action: rest_command.werner_signal_konten
+              response_variable: konten
+              continue_on_error: true
+            - variables:
+                absender: '{{ (konten.content | default([]))[0] | default('''') if konten is defined and konten.status | default(0) == 200 else '''' }}'
+                ptel: '{{ states(''input_text.werner_person_'' ~ repeat.item ~ ''_telefon'') }}'
+            - if:
+              - condition: template
+                value_template: '{{ absender != '''' }}'
+              then:
+              - action: rest_command.werner_signal_senden
+                continue_on_error: true
+                data:
+                  absender: '{{ absender }}'
+                  empfaenger: '{{ ptel }}'
+                  message: |-
+                    Werner: {{ grund }}
+                    Sie sind die {{ repeat.item }}. Vertrauensperson von {{ states('input_text.werner_bewohner_name') }}. Bitte rufen Sie {{ states('input_text.werner_bewohner_name') }} an oder schauen Sie vorbei.
+                    Melden Sie sich nicht in 15 Minuten, informiert Werner die nächste Person.
+              - action: logbook.log
+                data:
+                  name: Werner
+                  message: 'informiert {{ pname }} (Platz {{ repeat.item }}) per Signal: {{ grund }}'
+              - wait_for_trigger:
+                - trigger: state
+                  entity_id: input_select.werner_status
+                  to: Alles in Ordnung
+                timeout:
+                  minutes: 15
+                continue_on_timeout: true
+              - if:
+                - condition: state
+                  entity_id: input_select.werner_status
+                  state: Alles in Ordnung
+                then:
+                - stop: '{{ states(''input_text.werner_bewohner_name'') }} hat sich gemeldet'
+              else:
+              - action: logbook.log
+                data:
+                  name: Werner
+                  message: '{{ pname }} sollte per Signal informiert werden, aber Signal ist nicht verbunden. Weiter zur nächsten Person.'
+          - conditions:
+            - condition: template
+              value_template: '{{ pname not in ['''', ''unknown'', ''unavailable''] and pweg == ''SMS'' }}'
+            sequence:
+            - action: logbook.log
+              data:
+                name: Werner
+                message: '{{ pname }} sollte per SMS informiert werden – dieser Weg ist nicht eingerichtet. Weiter zur nächsten Person.'
+    - action: logbook.log
+      data:
+        message: 'Niemand aus der Liste hat übernommen. Grund: {{ grund }}'
+        name: Werner
+    - action: notify.mobile_app_bewohner_handy
+      data:
+        data:
+          push:
+            interruption-level: time-sensitive
+        message: Ich konnte niemanden aus Ihrer Liste erreichen. Wenn Sie Hilfe brauchen, rufen Sie bitte 112 an.
+        title: Werner
+  werner_hilfe:
+    alias: 'Werner: Ich brauche Hilfe'
+    description: 'Taste ''Ich brauche Hilfe'' im Dashboard: informiert sofort die Vertrauenspersonen – auch wenn Werner pausiert ist.'
+    icon: mdi:hand-back-left
+    mode: single
+    sequence:
+    - action: input_select.select_option
+      data:
+        option: Hilfe angefordert
+      target:
+        entity_id: input_select.werner_status
+    - action: logbook.log
+      data:
+        message: '{{ states(''input_text.werner_bewohner_name'') }} hat im Dashboard ''Ich brauche Hilfe'' gedrückt.'
+        name: Werner
+    - action: script.werner_eskalieren
+      data:
+        grund: '{{ states(''input_text.werner_bewohner_name'') }} hat ''Ich brauche Hilfe'' gedrückt.'
+  werner_alles_gut:
+    alias: 'Werner: Alles gut'
+    description: 'Taste ''Alles gut'' im Dashboard: beantwortet eine laufende Nachfrage und merkt sich die Aktivität.'
+    icon: mdi:check-circle
+    mode: single
+    sequence:
+    - action: input_datetime.set_datetime
+      data:
+        datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+      target:
+        entity_id: input_datetime.werner_letzte_aktivitat
+    - action: input_select.select_option
+      data:
+        option: Alles in Ordnung
+      target:
+        entity_id: input_select.werner_status
+    - action: logbook.log
+      data:
+        message: '{{ states(''input_text.werner_bewohner_name'') }} hat im Dashboard bestätigt: alles gut.'
+        name: Werner
+automation:
+- alias: 'Werner: Aktivität erkennen'
+  description: 'Merkt sich, wann der Bewohner zuletzt aktiv war (input_datetime.werner_letzte_aktivitat). Quellen heute: iPhone (Laden ein/aus, Fokus, nach Hause kommen), Antworten auf Werner. Später kommen Stromverbrauch (Tibber Pulse/evcc), iPad und ggf. Bewegungsmelder dazu. Nachts (0-5 Uhr) wird bei aktiver Regel nachgefragt.'
+  triggers:
+  - entity_id: sensor.bewohner_handy_battery_state
+    id: iphone
+    note: Ladekabel ein-/ausstecken ist ein sicheres Zeichen für Aktivität
+    trigger: state
+  - entity_id: binary_sensor.bewohner_handy_focus
+    id: iphone
+    trigger: state
+  - entity_id: person.bewohner
+    id: heimkehr
+    to: home
+    trigger: state
+  - entity_id: person.bewohner
+    from: home
+    id: unterwegs
+    trigger: state
+  conditions:
+  - condition: not
+    conditions:
+    - condition: state
+      entity_id: sensor.bewohner_handy_battery_state
+      state:
+      - unavailable
+      - unknown
+  actions:
+  - action: input_datetime.set_datetime
+    data:
+      datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+    target:
+      entity_id: input_datetime.werner_letzte_aktivitat
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: heimkehr
+      sequence:
+      - action: logbook.log
+        data:
+          message: '{{ states(''input_text.werner_bewohner_name'') }} ist wieder zu Hause.'
+          name: Werner
+    - conditions:
+      - condition: trigger
+        id: unterwegs
+      sequence:
+      - action: logbook.log
+        data:
+          message: '{{ states(''input_text.werner_bewohner_name'') }} ist unterwegs – Werner schweigt.'
+          name: Werner
+    - conditions:
+      - condition: trigger
+        id: iphone
+      - after: 00:00:00
+        before: 05:00:00
+        condition: time
+      - condition: state
+        entity_id: input_boolean.werner_regel_nachts_ungewohnlich_aktiv
+        state: 'on'
+      - condition: state
+        entity_id: input_boolean.werner_pausiert
+        state: 'off'
+      - condition: state
+        entity_id: input_select.werner_status
+        state: Alles in Ordnung
+      - condition: state
+        entity_id: automation.werner_regeln_prufen
+        state: 'on'
+      sequence:
+      - action: script.turn_on
+        data:
+          variables:
+            grund: Es ist mitten in der Nacht und Werner hat Aktivität bemerkt.
+        target:
+          entity_id: script.werner_nachfragen
+  max: 5
+  max_exceeded: silent
+  mode: queued
+  id: werner_aktivitaet_erkennen
+- alias: 'Werner: Regeln prüfen'
+  description: 'Prüft alle 10 Minuten die Regeln: ''Morgens nichts los'' (bis zur eingestellten Uhrzeit keine Aktivität seit 5 Uhr) und ''Tagsüber lange still'' (zwischen 8 und 22 Uhr länger als die eingestellten Stunden keine Aktivität). Nur wenn der Bewohner zu Hause ist und Werner nicht pausiert. Bleibt aus, bis der Stromverbrauch als Aktivitätssignal angebunden ist.'
+  triggers:
+  - minutes: /10
+    trigger: time_pattern
+  conditions:
+  - condition: state
+    entity_id: input_boolean.werner_pausiert
+    state: 'off'
+  - condition: state
+    entity_id: person.bewohner
+    state: home
+  - condition: state
+    entity_id: input_select.werner_status
+    state: Alles in Ordnung
+  actions:
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: input_boolean.werner_regel_morgens_nichts_los
+        state: 'on'
+      - after: 05:00:00
+        before: '13:00:00'
+        condition: time
+      - condition: template
+        value_template: '{{ now().hour >= morgen_bis and letzte < heute_5uhr }}'
+      sequence:
+      - action: script.turn_on
+        data:
+          variables:
+            grund: Es ist schon {{ now().strftime('%H:%M') }} Uhr und Werner hat heute noch nichts von Ihnen bemerkt.
+        target:
+          entity_id: script.werner_nachfragen
+    - conditions:
+      - condition: state
+        entity_id: input_boolean.werner_regel_tagsuber_lange_still
+        state: 'on'
+      - after: 08:00:00
+        before: '22:00:00'
+        condition: time
+      - condition: template
+        value_template: '{{ letzte > 0 and seit_h >= ruhe_h }}'
+      sequence:
+      - action: script.turn_on
+        data:
+          variables:
+            grund: Seit etwa {{ seit_h | round(0) | int }} Stunden war es bei Ihnen ganz still.
+        target:
+          entity_id: script.werner_nachfragen
+  max_exceeded: silent
+  mode: single
+  variables:
+    heute_5uhr: '{{ today_at(''05:00'').timestamp() }}'
+    letzte: '{{ state_attr(''input_datetime.werner_letzte_aktivitat'', ''timestamp'') | float(0) }}'
+    morgen_bis: '{{ states(''input_number.werner_morgens_bis_uhr'') | int(10) }}'
+    ruhe_h: '{{ states(''input_number.werner_ruhe_stunden'') | float(4) }}'
+    seit_h: '{{ ((now().timestamp() - letzte) / 3600) | round(1) }}'
+  id: werner_regeln_pruefen
+- alias: 'Werner: Pause steuern'
+  description: Hält Werners Status bei Pause aktuell und beendet eine Pause automatisch zum eingestellten Zeitpunkt (input_datetime.werner_pause_bis), z. B. nach einer Reise.
+  triggers:
+  - entity_id: input_boolean.werner_pausiert
+    id: pause_an
+    to: 'on'
+    trigger: state
+  - entity_id: input_boolean.werner_pausiert
+    id: pause_aus
+    to: 'off'
+    trigger: state
+  - at: input_datetime.werner_pause_bis
+    id: pause_ende
+    trigger: time
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: pause_an
+      sequence:
+      - action: input_select.select_option
+        data:
+          option: Pausiert
+        target:
+          entity_id: input_select.werner_status
+      - action: logbook.log
+        data:
+          message: wurde pausiert.
+          name: Werner
+    - conditions:
+      - condition: trigger
+        id: pause_aus
+      sequence:
+      - action: input_select.select_option
+        data:
+          option: Alles in Ordnung
+        target:
+          entity_id: input_select.werner_status
+      - action: input_datetime.set_datetime
+        data:
+          datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+        target:
+          entity_id: input_datetime.werner_letzte_aktivitat
+      - action: logbook.log
+        data:
+          message: passt wieder auf.
+          name: Werner
+    - conditions:
+      - condition: trigger
+        id: pause_ende
+      - condition: state
+        entity_id: input_boolean.werner_pausiert
+        state: 'on'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.werner_pausiert
+      - action: notify.mobile_app_bewohner_handy
+        data:
+          message: Willkommen zurück! Ich passe wieder auf.
+          title: Werner
+  mode: queued
+  id: werner_pause_steuern

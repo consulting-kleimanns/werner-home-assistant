@@ -1,12 +1,11 @@
 # Änderungen
 
-## 0.1.0 – unveröffentlicht
+## 0.1.0 – 2026-11-23
+Erste öffentliche Fassung aus einer laufenden Installation, anonymisiert und verallgemeinert.
+- Package `werner.yaml`: Helfer, Nachfrage, Eskalation an bis zu 3 Vertrauenspersonen (HA-App mit Antwortknöpfen, Signal, E-Mail), Pause, Regeln.
+- Karte `mein-zuhause-card` 0.1.0: Bildschirme Start, Werner, Energie, Auto, Einstellen; Signal-Verbindung per QR-Code; Einzeltest je Vertrauensperson; SMTP-Einstellungen; Erklärung in einfacher Sprache.
+- `werner_mail.py` für frei einstellbaren SMTP-Versand.
+- Theme `mein_zuhause`, Beispiel-Dashboard, Anleitungen.
 
-- Installation über HACS (als benutzerdefiniertes Repository) und Knöpfe „In HACS öffnen“ und „Werner hinzufügen“ im README.
-- Erster Schritt des Einrichtungs-Assistenten: Bewohner hinzufügen (Name, Person, Handy). Ein Eintrag je Bewohner.
-- Anleitungen: Installation für Helfer, „So funktioniert Werner“ in einfacher Sprache, Datenschutz.
-- Automatische Prüfung mit hassfest.
-
-## Repository angelegt
-
-- README, MIT-Lizenz, geplanter Aufbau.
+## Anfang
+- Repository angelegt: README, MIT-Lizenz, geplanter Aufbau.
