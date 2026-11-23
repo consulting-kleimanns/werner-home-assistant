@@ -1,0 +1,25 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Bewohner hinzufügen",
+        "description": "Werner wird für jeden Bewohner einmal eingerichtet. Jeder Bewohner braucht ein eigenes Konto in Home Assistant und die Home-Assistant-App auf seinem Handy.",
+        "data": {
+          "name": "Name (so spricht Werner ihn an)",
+          "person": "Person in Home Assistant",
+          "notify_service": "Benachrichtigungsdienst des Handys"
+        },
+        "data_description": {
+          "notify_service": "Zum Beispiel mobile_app_erikas_handy. Hier fragt Werner den Bewohner zuerst."
+        }
+      }
+    },
+    "error": {
+      "name_missing": "Bitte einen Namen eintragen.",
+      "notify_not_found": "Diesen Benachrichtigungsdienst gibt es nicht. Bitte die Home-Assistant-App auf dem Handy des Bewohners prüfen."
+    },
+    "abort": {
+      "already_configured": "Diese Person ist in Werner schon eingerichtet."
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add resident",
+        "description": "Werner is set up once for every resident. Each resident needs their own Home Assistant user and the Home Assistant app on their phone.",
+        "data": {
+          "name": "Name (how Werner addresses them)",
+          "person": "Person in Home Assistant",
+          "notify_service": "Notify service of the resident's phone"
+        },
+        "data_description": {
+          "notify_service": "For example mobile_app_ericas_phone. Werner asks the resident here first."
+        }
+      }
+    },
+    "error": {
+      "name_missing": "Please enter a name.",
+      "notify_not_found": "This notify service does not exist. Check the Home Assistant app on the resident's phone."
+    },
+    "abort": {
+      "already_configured": "This person is already set up in Werner."
+    }
+  }
+}
