@@ -11,7 +11,7 @@
  * können zwischen den Bewohnern umschalten. Alle Werte kommen aus den Entitäten
  * der Integration; was nicht eingerichtet ist, wird ausgeblendet oder zeigt „–“.
  */
-const WERNER_UI_VERSION = '0.3.0';
+const WERNER_UI_VERSION = '0.4.0';
 
 const C = {
   bg: '#F5F2EA', ink: '#1E2421', muted: '#55605A', line: '#E2DDD1', blue: '#1F4E79', blueBg: '#E6EEF6', blueInk: '#12324F',
@@ -61,8 +61,8 @@ h1.big{font-size:30px}
 .day{flex-shrink:0;width:96px;min-height:120px;border-radius:16px;padding:10px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid ${C.line};background:#FFF;color:${C.ink}}
 .day.good{background:#FBF1D9;color:#5A3E05}.day.sel{border:3px solid ${C.blue}}
 .log{display:flex;gap:12px;font-size:16px;align-items:baseline}.log b{width:52px;flex-shrink:0}
-.sub{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;background:#E9E4D8;border-radius:16px;padding:5px}
-.sub button{min-height:48px;border-radius:12px;border:none;font-size:16px;background:transparent;color:#3E4541}
+.sub{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;background:#E9E4D8;border-radius:16px;padding:5px}
+.sub button{min-height:48px;border-radius:12px;border:none;font-size:15px;padding:0 2px;background:transparent;color:#3E4541}
 .sub button.on{background:#FFF;color:${C.blueInk};font-weight:700}
 .nr{width:38px;height:38px;flex-shrink:0;border-radius:19px;background:${C.blue};color:#FFF;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .row{display:flex;align-items:center;gap:12px}.between{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -162,6 +162,8 @@ class WernerMeinZuhause extends HTMLElement {
       this.shadowRoot.addEventListener('click', (ev) => this._click(ev));
       this.shadowRoot.addEventListener('change', (ev) => this._change(ev));
     }
+    const hhSig = this._residents().map((x) => x.entity_id + x.attributes.consent).join('|');
+    if (hhSig !== this._hhSig) { this._hhSig = hhSig; this._loadHousehold(); }
     const r = this._current();
     if (r) {
       this._subscribeForecast(r);
@@ -179,13 +181,26 @@ class WernerMeinZuhause extends HTMLElement {
     }
     return out.sort((a, b) => String(a.attributes.resident || '').localeCompare(String(b.attributes.resident || '')));
   }
-  _current() {
-    const rs = this._residents();
-    if (!rs.length) return null;
-    if (this._who) { const f = rs.find((r) => r.entity_id === this._who); if (f) return f; }
+  _mine() {
     const uid = this._h.user && this._h.user.id;
-    const mine = rs.find((r) => { const p = this._h.states[r.attributes.person]; return p && p.attributes.user_id === uid; });
-    return mine || rs[0];
+    return this._residents().find((r) => { const p = this._h.states[r.attributes.person]; return p && p.attributes.user_id === uid; }) || null;
+  }
+  _current() {
+    // Jeder sieht nur sich selbst. Ein Helfer (Administrator) kann umschalten.
+    const mine = this._mine();
+    if (!(this._h.user && this._h.user.is_admin)) return mine;
+    const rs = this._residents();
+    if (this._who) { const f = rs.find((r) => r.entity_id === this._who); if (f) return f; }
+    return mine || rs[0] || null;
+  }
+  async _loadHousehold() {
+    try { this._hh = await this._h.callWS({ type: 'werner/household' }); } catch (err) { this._hh = { error: String(err.message || err) }; }
+    this._render(true);
+  }
+  async _ws(msg) {
+    this._busy = true; this._err = null; this._render(true);
+    try { const res = await this._h.callWS(msg); this._busy = false; await this._loadHousehold(); return res || {}; }
+    catch (err) { this._busy = false; this._err = err.message || String(err); this._render(true); return null; }
   }
   _id(key) { return (this._r && this._r.attributes.entities || {})[key]; }
   _st(key) { const id = this._id(key); const s = id && this._h.states[id]; return s ? s.state : undefined; }
@@ -265,14 +280,16 @@ class WernerMeinZuhause extends HTMLElement {
     const en = r ? Object.values(this._energy()).filter((v) => typeof v === 'string' && v.includes('.')) : [];
     const sig = (r ? r.state + JSON.stringify(r.attributes) : '') + ids.concat(en).map((i) => this._h.states[i] && this._h.states[i].state).join('|')
       + (r && this._h.states[r.attributes.person] ? this._h.states[r.attributes.person].state : '')
-      + JSON.stringify(this._ui) + JSON.stringify(this._tests) + (this._log ? this._log.length : -1) + (this._fc ? this._fc.length : 0) + (this._who || '');
+      + JSON.stringify(this._ui) + JSON.stringify(this._tests) + JSON.stringify(this._hh || null) + (this._busy ? 'B' : '') + (this._err || '') + (this._log ? this._log.length : -1) + (this._fc ? this._fc.length : 0) + (this._who || '');
     if (!force && sig === this._sig) return;
     this._sig = sig;
 
     let body;
     let tabs = [];
     if (!r) {
-      body = `<div class="card empty"><div class="t-l">Werner ist noch nicht eingerichtet</div><div class="txt">Ein Helfer fügt Werner unter Einstellungen › Geräte &amp; Dienste hinzu.</div></div>`;
+      body = this._onboarding();
+    } else if (r.attributes.consent === false) {
+      body = this._consentScreen();
     } else {
       tabs = [['einstellen', 'Einstellen']].concat(this._hasCar() ? [['auto', 'Auto']] : []).concat([['energie', 'Energie'], ['werner', 'Werner'], ['start', 'Start']]);
       if (!tabs.find((t) => t[0] === this._ui.tab)) this._ui.tab = 'start';
@@ -282,7 +299,8 @@ class WernerMeinZuhause extends HTMLElement {
     const top = this._topBar();
     const nav = tabs.length ? `<nav aria-label="Reiter"><div class="wrapnav" style="grid-template-columns:repeat(${tabs.length},minmax(0,1fr))">${tabs.map((t) => `<button type="button" data-tab="${t[0]}" class="${this._ui.tab === t[0] ? 'on' : ''}" ${this._ui.tab === t[0] ? 'aria-current="page"' : ''}>${svg(t[0])}<span>${t[1]}</span></button>`).join('')}</div></nav>` : '';
     let sheet = '';
-    if (r) {
+    if (this._ui.sheet === 'remove_me') sheet = this._sheetRemoveMe();
+    else if (r && r.attributes.consent !== false) {
       if (r.state === 'asking' && this._ui.sheet !== 'hilfe' && this._ui.checkClosed !== r.last_changed) sheet = this._sheetCheck();
       else if (this._ui.sheet === 'hilfe') sheet = this._sheetHilfe();
       else if (this._ui.sheet === 'info') sheet = this._sheetInfo();
@@ -406,8 +424,8 @@ ${sorted.map((o) => { const m = MODES[o] || [o, '']; const on = modeEnt.state ==
   /* ---------- Einstellen ---------- */
   _einstellen() {
     const sub = this._ui.sub; const multi = this._residents().length > 1;
-    const tabs = [['wer', 'Wer & wie'], ['wann', 'Wann'], ['sensoren', 'Sensoren']].map((t) => `<button type="button" role="tab" aria-selected="${sub === t[0]}" class="${sub === t[0] ? 'on' : ''}" data-sub="${t[0]}">${t[1]}</button>`).join('');
-    const body = sub === 'wann' ? this._wann() : sub === 'sensoren' ? this._sensoren() : this._wer();
+    const tabs = [['wer', 'Wer & wie'], ['wann', 'Wann'], ['sensoren', 'Sensoren'], ['bewohner', 'Bewohner']].map((t) => `<button type="button" role="tab" aria-selected="${sub === t[0]}" class="${sub === t[0] ? 'on' : ''}" data-sub="${t[0]}">${t[1]}</button>`).join('');
+    const body = sub === 'wann' ? this._wann() : sub === 'sensoren' ? this._sensoren() : sub === 'bewohner' ? this._bewohner() : this._wer();
     return `<h1>Werner einstellen</h1><div class="muted">${multi ? 'Das sind Ihre Einstellungen, ' + esc(this._r.attributes.resident) + '. Nur Sie sehen und ändern sie.' : 'Sie bestimmen, wer wie und wann informiert wird.'}</div>
 <button type="button" class="btn" style="min-height:52px;color:${C.blue}" data-act="info">So funktioniert Werner</button>
 <div class="sub" role="tablist" aria-label="Bereiche">${tabs}</div>${body}`;
@@ -485,6 +503,85 @@ ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" da
     html += `<div class="card" style="padding:14px 16px;gap:8px"><span class="t-m">Ihre Daten gehören Ihnen</span><div style="font-size:15px;line-height:1.4;color:#3E4541">Alles bleibt in Ihrem Haus. Sie sehen jederzeit, was Werner über Sie weiß.</div><button type="button" class="btn" style="min-height:52px;color:${C.blue}" data-act="data">Ansehen</button></div>`;
     return html + `<div class="small">${esc(this._sensorNote())}</div>`;
   }
+
+  /* ---------- Bewohner (Selbstbestimmung) ---------- */
+  _phoneSelect(field, current) {
+    const phones = (this._hh && this._hh.phones) || [];
+    return `<label class="f">Mein Handy (dort fragt Werner nach)<select data-f="${field}"><option value="">– kein Handy –</option>${phones.map((s) => `<option value="${esc(s)}" ${current === s ? 'selected' : ''}>${esc(s.replace('mobile_app_', '').replace(/_/g, ' '))}</option>`).join('')}</select></label>`;
+  }
+  _errBox() { return this._err ? `<div class="box err" style="padding:12px 14px"><div class="txt">${esc(this._err)}</div></div>` : ''; }
+  _household(withAdd) {
+    const hh = this._hh;
+    if (!hh) return '<div class="muted">Wird geladen …</div>';
+    if (hh.error) return `<div class="box err"><div class="txt">Der Haushalt konnte nicht geladen werden. Ist Werner in der neuesten Version installiert?</div></div>`;
+    const others = hh.residents.filter((x) => !x.mine);
+    let html = `<section class="card" aria-label="Haushalt"><div class="t-m">Wer im Haushalt Werner nutzt</div>`;
+    html += hh.residents.length ? hh.residents.map((x) => `<div class="between" style="border-top:1px solid #EFEBE2;padding-top:10px"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:700">${esc(x.name)}${x.mine ? ' (Sie)' : ''}</span><span class="small">${x.consent ? 'Werner passt auf' : 'Wartet auf Zustimmung von ' + esc(x.name)}</span></span>${!x.mine && x.may_remove ? `<button type="button" class="link" data-remove-res="${esc(x.entry_id)}">${x.consent ? 'Entfernen' : 'Zurücknehmen'}</button>` : ''}</div>`).join('') : '<div class="muted">Noch niemand.</div>';
+    html += `<div class="small">Jeder sieht nur seine eigenen Einstellungen und sein eigenes Protokoll.${others.length ? ' Von den anderen sehen Sie nur den Namen.' : ''}</div></section>`;
+    if (!withAdd) return html;
+    const free = hh.persons.filter((p) => !p.taken && (p.has_login || hh.is_admin));
+    if (this._ui.addRes) {
+      html += `<section class="card" aria-label="Bewohner hinzufügen"><div class="t-m">Bewohner hinzufügen</div>
+<label class="f">Wer?<select data-f="add_person">${free.map((p) => `<option value="${esc(p.entity_id)}">${esc(p.name)}${p.me ? ' (Sie selbst)' : ''}</option>`).join('')}</select></label>
+<label class="f">So soll Werner die Person ansprechen<input type="text" data-f="add_name" maxlength="40" placeholder="z. B. Erika"></label>
+<div class="box info" style="padding:12px 14px"><div class="txt">Die Person muss <b>selbst zustimmen</b> – mit ihrer eigenen Anmeldung. Erst dann passt Werner auf sie auf. Sie bekommt einen Hinweis aufs Handy, wenn eines eingetragen ist.</div></div>
+${this._phoneSelect('add_notify', '')}${this._errBox()}
+<button type="button" class="btn blue" data-act="add-res" ${this._busy ? 'disabled' : ''}>Eintragen</button><button type="button" class="btn" data-act="add-res-cancel">Abbrechen</button></section>`;
+    } else if (free.length) {
+      html += `<button type="button" class="btn dashed" data-act="add-res-open">+ Bewohner hinzufügen</button>`;
+    } else {
+      html += `<div class="small">Weitere Bewohner brauchen eine eigene Anmeldung in Home Assistant. Die richtet ein Helfer ein.</div>`;
+    }
+    return html;
+  }
+  _onboarding() {
+    const hh = this._hh; const me = hh && hh.persons ? hh.persons.find((p) => p.me) : null;
+    const taken = me && me.taken;
+    const name = ((this._h.user && this._h.user.name) || '').split(' ')[0];
+    let mine;
+    if (!hh) mine = '<div class="muted">Wird geladen …</div>';
+    else if (!me) mine = `<div class="box warn"><div class="t-m">Ihre Anmeldung gehört noch zu keiner Person</div><div class="txt">Das richtet Ihr Helfer unter Einstellungen › Personen ein. Danach können Sie Werner hier selbst einschalten.</div></div>`;
+    else if (taken) mine = `<div class="box warn"><div class="txt">Für Sie ist Werner schon eingetragen.</div></div>`;
+    else mine = `<section class="card" aria-label="Werner für mich einschalten"><div class="t-l">Werner für mich einschalten</div>
+<ul style="margin:0;padding-left:22px;font-size:17px;line-height:1.45"><li>Werner passt auf, ob bei Ihnen alles in Ordnung ist.</li><li>Ist es ungewöhnlich still, fragt Werner <b>zuerst Sie</b>.</li><li>Wen Werner danach informiert, bestimmen Sie selbst.</li><li>Sie können Werner jederzeit pausieren oder wieder beenden.</li></ul>
+<label class="f">So soll Werner Sie ansprechen<input type="text" data-f="my_name" maxlength="40" value="${esc(name)}"></label>
+${this._phoneSelect('my_notify', '')}${this._errBox()}
+<button type="button" class="btn green" data-act="add-me" ${this._busy ? 'disabled' : ''}>Werner einschalten</button></section>`;
+    return `<h1>Willkommen bei Werner</h1><div class="muted">Sie entscheiden selbst, ob und wie Werner auf Sie aufpasst.</div>${mine}${hh && !hh.error ? this._household(true) : ''}`;
+  }
+  _consentScreen() {
+    const r = this._r; const x = this._hh && this._hh.residents ? this._hh.residents.find((y) => y.entry_id === r.attributes.entry_id) : null;
+    const who = x && x.created_by ? x.created_by : 'Jemand';
+    return `<h1>Möchten Sie Werner?</h1>
+<section class="box info"><div class="t-l">${esc(who)} hat Werner für Sie eingetragen</div><div class="txt">Werner passt erst auf Sie auf, wenn Sie zustimmen. Sie entscheiden das selbst.</div></section>
+<section class="card"><ul style="margin:0;padding-left:22px;font-size:17px;line-height:1.45"><li>Werner merkt, ob sich bei Ihnen etwas tut. Keine Kamera, kein Mikrofon – außer Sie schalten es selbst ein.</li><li>Ist es ungewöhnlich still, fragt Werner <b>zuerst Sie</b>.</li><li>Wen Werner danach informiert, bestimmen nur Sie.</li><li>Ihre Einstellungen und Ihr Protokoll sieht niemand außer Ihnen.</li><li>Sie können Werner jederzeit pausieren oder beenden.</li></ul></section>
+${this._errBox()}
+<button type="button" class="btn green" style="min-height:64px;font-size:20px" data-act="consent-yes" ${this._busy ? 'disabled' : ''}>Ja, Werner soll auf mich aufpassen</button>
+<button type="button" class="btn" style="min-height:60px" data-act="consent-no" ${this._busy ? 'disabled' : ''}>Nein, danke</button>
+<div class="small">Bei „Nein, danke“ wird der Eintrag gelöscht.</div>`;
+  }
+  _bewohner() {
+    const hh = this._hh; const x = hh && hh.residents ? hh.residents.find((y) => y.entry_id === this._r.attributes.entry_id) : null;
+    const own = x && (x.mine || (hh && hh.is_admin));
+    let html = '';
+    if (own) {
+      html += `<section class="card" aria-label="Über mich"><div class="t-m">${x.mine ? 'Über mich' : esc(x.name)}</div>
+<label class="f">So spricht Werner ${x.mine ? 'Sie' : 'die Person'} an<input type="text" data-f="res_name" maxlength="40" value="${esc(x.name)}"></label>
+${this._phoneSelect('res_notify', x.notify || '')}${this._errBox()}
+<button type="button" class="btn blue" data-act="save-res" ${this._busy ? 'disabled' : ''}>Speichern</button></section>`;
+    }
+    html += this._household(true);
+    if (x && x.may_remove) html += `<button type="button" class="btn redline" data-act="remove-me">${x.mine ? 'Werner für mich beenden' : 'Werner für ' + esc(x.name) + ' beenden'}</button>`;
+    return html;
+  }
+  _sheetRemoveMe() {
+    const id = this._ui.removeId; const x = this._hh && this._hh.residents ? this._hh.residents.find((y) => y.entry_id === id) : null;
+    if (!x) return '';
+    return this._sheet('Werner beenden', `<div style="font-size:26px;font-weight:700;line-height:1.2">${x.mine ? 'Werner für Sie beenden?' : 'Werner für ' + esc(x.name) + ' beenden?'}</div>
+<div style="font-size:17px;line-height:1.45">Werner passt dann nicht mehr auf. ${x.mine ? 'Ihre' : 'Die'} Einstellungen und Vertrauenspersonen werden gelöscht. Sie können Werner später wieder einschalten.</div>${this._errBox()}
+<button type="button" class="btn red" data-act="remove-yes" ${this._busy ? 'disabled' : ''}>Ja, beenden</button><button type="button" class="btn" data-act="close">Nein, doch nicht</button>`, 'alertdialog');
+  }
+  _val(field) { const el = this.shadowRoot.querySelector(`[data-f="${field}"]`); return el ? el.value.trim() : ''; }
 
   /* ---------- Fenster ---------- */
   _sheet(label, inner, role = 'dialog') { return `<div class="sheet-bg" data-act="close"><div class="sheet" role="${role}" aria-label="${esc(label)}">${inner}</div></div>`; }
@@ -618,6 +715,7 @@ ${items.map((x) => `<div style="display:flex;flex-direction:column;gap:2px;borde
       this._call('number', 'set_value', { entity_id: id, value: Math.min(max, Math.max(min, v)) });
       return;
     }
+    if (d.removeRes) { this._ui.removeId = d.removeRes; this._ui.sheet = 'remove_me'; this._err = null; this._render(true); return; }
     if (d.mode) { this._call('select', 'select_option', { entity_id: this._energy().charge_mode, option: d.mode }); return; }
     switch (d.act) {
       case 'menu': this.dispatchEvent(new Event('hass-toggle-menu', { bubbles: true, composed: true })); break;
@@ -628,6 +726,30 @@ ${items.map((x) => `<div style="display:flex;flex-direction:column;gap:2px;borde
       case 'info': this._ui.sheet = 'info'; this._render(true); break;
       case 'data': this._ui.sheet = 'data'; this._render(true); break;
       case 'add': { const free = this._people().find((p) => !p.name); if (free) { this._ui.adding = free.n; this._render(true); const inp = this.shadowRoot.querySelector(`input[data-text="person_${free.n}_name"]`); if (inp) inp.focus(); } break; }
+      case 'add-me': {
+        const hh = this._hh; const me = hh && hh.persons.find((p) => p.me);
+        if (!me) break;
+        const name = this._val('my_name'); if (!name) { this._err = 'Bitte einen Namen eintragen.'; this._render(true); break; }
+        this._ws({ type: 'werner/resident/add', person: me.entity_id, name, notify: this._val('my_notify') });
+        break;
+      }
+      case 'add-res-open': this._ui.addRes = true; this._err = null; this._render(true); break;
+      case 'add-res-cancel': this._ui.addRes = false; this._err = null; this._render(true); break;
+      case 'add-res': {
+        const person = this._val('add_person'); const name = this._val('add_name');
+        if (!person || !name) { this._err = 'Bitte Person und Namen angeben.'; this._render(true); break; }
+        this._ws({ type: 'werner/resident/add', person, name, notify: this._val('add_notify') }).then((res) => { if (res) { this._ui.addRes = false; this._render(true); } });
+        break;
+      }
+      case 'save-res': {
+        const name = this._val('res_name'); if (!name) { this._err = 'Bitte einen Namen eintragen.'; this._render(true); break; }
+        this._ws({ type: 'werner/resident/update', entry_id: this._r.attributes.entry_id, name, notify: this._val('res_notify') });
+        break;
+      }
+      case 'remove-me': this._ui.removeId = this._r.attributes.entry_id; this._ui.sheet = 'remove_me'; this._err = null; this._render(true); break;
+      case 'remove-yes': this._ws({ type: 'werner/resident/remove', entry_id: this._ui.removeId }).then((res) => { if (res) { this._ui.sheet = null; this._ui.tab = 'start'; this._who = null; this._render(true); } }); break;
+      case 'consent-yes': this._ws({ type: 'werner/resident/consent', entry_id: this._r.attributes.entry_id, accept: true }); break;
+      case 'consent-no': this._ws({ type: 'werner/resident/consent', entry_id: this._r.attributes.entry_id, accept: false }); break;
       case 'close':
         if (this._r && this._r.state === 'asking' && !this._ui.sheet) this._ui.checkClosed = this._r.last_changed;
         this._ui.sheet = null; this._render(true); break;

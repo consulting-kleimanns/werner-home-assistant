@@ -18,6 +18,8 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_BASELOAD,
     CONF_BATTERY_SOC,
+    CONF_CONSENT,
+    CONF_CREATED_BY,
     CONF_CHARGE_MODE,
     CONF_GRID_ENERGY,
     CONF_GRID_POWER,
@@ -47,6 +49,17 @@ class WernerConfigFlow(ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry: ConfigEntry) -> WernerOptionsFlow:
         """Optionen: Aktivitätsquellen und Grundlast."""
         return WernerOptionsFlow()
+
+    async def async_step_werner_ui(
+        self, data: dict[str, Any]
+    ) -> ConfigFlowResult:
+        """Bewohner aus „Mein Zuhause“ (geprüft in websocket.py)."""
+        await self.async_set_unique_id(data[CONF_PERSON])
+        self._abort_if_unique_id_configured()
+        return self.async_create_entry(
+            title=data[CONF_NAME],
+            data={k: data[k] for k in (CONF_NAME, CONF_PERSON, CONF_NOTIFY, CONF_CONSENT, CONF_CREATED_BY)},
+        )
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None

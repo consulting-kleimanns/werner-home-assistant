@@ -35,6 +35,7 @@ from .const import (
     CHECK_INTERVAL_MINUTES,
     CONF_BASELOAD,
     CONF_NAME,
+    CONF_CONSENT,
     CONF_NOTIFY,
     CONF_PERSON,
     CONF_SOURCES,
@@ -87,6 +88,8 @@ class Bewohner:
         self.name: str = entry.data[CONF_NAME]
         self.person: str = entry.data[CONF_PERSON]
         self.notify: str = entry.data.get(CONF_NOTIFY) or ""
+        # Ältere Einträge und Einträge vom Helfer gelten als zugestimmt.
+        self.consent: bool = bool(entry.data.get(CONF_CONSENT, True))
 
         self.settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
         self.status: str = STATUS_OK
@@ -296,7 +299,8 @@ class Bewohner:
 
     def _may_ask(self) -> bool:
         return (
-            not self.settings["paused"]
+            self.consent
+            and not self.settings["paused"]
             and self.status == STATUS_OK
             and not self.busy
             and self._is_home()
@@ -338,8 +342,8 @@ class Bewohner:
 
     @callback
     def ask(self, reason: str) -> None:
-        """Beim Bewohner nachfragen (nie, wenn Werner pausiert ist)."""
-        if self.settings["paused"]:
+        """Beim Bewohner nachfragen (nie ohne Zustimmung oder wenn Werner pausiert ist)."""
+        if self.settings["paused"] or not self.consent:
             return
         self._start(self._ask(reason))
 

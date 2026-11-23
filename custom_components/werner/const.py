@@ -19,6 +19,10 @@ PLATFORMS: list[Platform] = [
 CONF_NAME = "name"
 CONF_PERSON = "person"
 CONF_NOTIFY = "notify_service"
+# Selbstbestimmung: Werner passt erst auf, wenn der Bewohner selbst zugestimmt hat.
+CONF_CONSENT = "consent"
+CONF_CREATED_BY = "created_by"
+SOURCE_UI = "werner_ui"
 
 # Optionen (vom Helfer im Options-Flow)
 CONF_SOURCES = "activity_sources"

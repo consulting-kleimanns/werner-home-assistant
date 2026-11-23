@@ -56,6 +56,7 @@ class StatusSensor(WernerEntity, SensorEntity, RestoreEntity):
             "entry_id": b.entry.entry_id,
             "person": b.person,
             "notify": bool(b.notify),
+            "consent": b.consent,
             "entities": dict(b.entity_ids),
             "sources": b.sources,
             "baseload_w": b.baseload,
