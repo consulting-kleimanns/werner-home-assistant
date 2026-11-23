@@ -26,18 +26,34 @@ Die Knöpfe öffnen Ihr eigenes Home Assistant über my.home-assistant.io. Beim 
 
 ## Stand der Entwicklung
 
-Werner läuft bereits in einer ersten echten Installation – dort noch als von Hand angelegte Helfer, Skripte und Automationen. Hier entsteht daraus Schritt für Schritt die allgemeine Integration.
+Werner gibt es heute in zwei Formen:
 
-| Teil | Stand |
+- **YAML-Paket (heute nutzbar):** Helfer, Skripte und Automationen zum Kopieren, mit der Karte „Mein Zuhause“. Für einen Bewohner, Einrichtung von Hand. Anleitung: [Werner als YAML-Paket](docs/einrichtung/README.md).
+- **Integration (Ziel, im Aufbau):** Installation über HACS mit den Knöpfen oben, Einrichtung per Assistent, mehrere Bewohner. Sie übernimmt Schritt für Schritt alles aus dem Paket und ersetzt es dann.
+
+| Teil | YAML-Paket | Integration |
+|---|---|---|
+| Installation | Dateien kopieren | über HACS |
+| Bewohner anlegen | von Hand | Einrichtungs-Assistent |
+| Nachfragen und Vertrauenspersonen informieren | vorhanden | in Arbeit |
+| Wege: HA-App, Signal, E-Mail | vorhanden | in Arbeit |
+| Dashboard „Mein Zuhause“ | Karte von Hand einbinden | geplant: wird automatisch angelegt |
+| Mehrere Bewohner | nein | vorgesehen: ein Eintrag je Bewohner |
+| Kamera und Mikrofon (nur mit Zustimmung) | nein | geplant |
+| Aufnahme in die HACS-Standardliste | – | geplant |
+
+## Inhalt des Repositorys
+
+| Ordner | Inhalt |
 |---|---|
-| Installation über HACS | vorhanden (als benutzerdefiniertes Repository, siehe Anleitung) |
-| Bewohner anlegen (Einrichtungs-Assistent) | erster Schritt vorhanden |
-| Nachfragen und Vertrauenspersonen informieren | in Arbeit |
-| Wege: Home-Assistant-App, Signal, E-Mail | in Arbeit |
-| Dashboard „Mein Zuhause“ | in Arbeit |
-| Mehrere Bewohner | vorgesehen: ein Eintrag je Bewohner |
-| Kamera und Mikrofon (nur mit Zustimmung) | geplant |
-| Aufnahme in die HACS-Standardliste | geplant |
+| `custom_components/werner/` | Integration (Ziel) |
+| `packages/werner.yaml` | YAML-Paket (Übergang) |
+| `card/` | Karte `mein-zuhause-card` |
+| `scripts/werner_mail.py` | E-Mail-Versand für das YAML-Paket |
+| `themes/` | Theme `mein_zuhause` |
+| `examples/` | Beispiel-Dashboard mit Musterdaten |
+| `blueprints/` | geplant: weitere Aktivitätsquellen |
+| `docs/` | Anleitungen |
 
 ## Grundsätze
 
@@ -51,6 +67,8 @@ Werner läuft bereits in einer ersten echten Installation – dort noch als von 
 
 - [So funktioniert Werner – in einfacher Sprache](docs/einfach/so-funktioniert-werner.md)
 - [Installation und Einrichtung – für Helfer](docs/einrichtung/installation.md)
+- [Werner als YAML-Paket – Übergangslösung](docs/einrichtung/README.md)
+- [Energie (optional)](docs/energie/README.md)
 - [Datenschutz](docs/datenschutz.md)
 
 ## Abhängigkeiten (nicht enthalten)
@@ -65,7 +83,7 @@ Diese Bausteine werden nur verlinkt, nicht mitgeliefert. Es gelten ihre eigenen 
 
 ## Mitmachen
 
-Fragen, Fehler und Ideen bitte als [Issue](https://github.com/consulting-kleimanns/werner-home-assistant/issues). Änderungen stehen im [Changelog](CHANGELOG.md).
+Fragen, Fehler und Ideen bitte als [Issue](https://github.com/consulting-kleimanns/werner-home-assistant/issues). Regeln fürs Mitmachen: [CONTRIBUTING](CONTRIBUTING.md). Änderungen stehen im [Changelog](CHANGELOG.md).
 
 ## Lizenz
 

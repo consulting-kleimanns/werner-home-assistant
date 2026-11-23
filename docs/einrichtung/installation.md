@@ -6,6 +6,8 @@ Richten Sie Werner **gemeinsam mit dem Bewohner** ein. Was der Bewohner selbst e
 
 > Werner ist kein Hausnotruf und kein Medizinprodukt. Im Notfall gilt immer 112.
 
+> **Übergang:** Die Integration ist noch im Aufbau. Wer Werner heute schon nutzen will, nimmt das [YAML-Paket](README.md). Die Schritte 1, 2 und 5 gelten für beide Wege.
+
 ## Überblick
 
 | Schritt | Was | Wie oft |

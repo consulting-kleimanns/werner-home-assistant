@@ -1,5 +1,7 @@
 # Einrichtung für Helfer
 
+> Das ist die heute nutzbare Fassung als YAML-Paket. Ziel ist die Integration mit Installation über HACS, siehe [Installation und Einrichtung](installation.md). Sie ersetzt das Paket, sobald sie alle Funktionen hat.
+
 Diese Anleitung richtet Werner und das Dashboard „Mein Zuhause“ in einem bestehenden Home Assistant ein (getestet mit HA OS 2026.11).
 
 ## 1. Voraussetzungen
