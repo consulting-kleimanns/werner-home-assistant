@@ -505,9 +505,9 @@ ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" da
   }
 
   /* ---------- Bewohner (Selbstbestimmung) ---------- */
-  _phoneSelect(field, current) {
+  _phoneSelect(field, current, label) {
     const phones = (this._hh && this._hh.phones) || [];
-    return `<label class="f">Mein Handy (dort fragt Werner nach)<select data-f="${field}"><option value="">– kein Handy –</option>${phones.map((s) => `<option value="${esc(s)}" ${current === s ? 'selected' : ''}>${esc(s.replace('mobile_app_', '').replace(/_/g, ' '))}</option>`).join('')}</select></label>`;
+    return `<label class="f">${label || 'Mein Handy (dort fragt Werner nach)'}<select data-f="${field}"><option value="">– kein Handy –</option>${phones.map((s) => `<option value="${esc(s)}" ${current === s ? 'selected' : ''}>${esc(s.replace('mobile_app_', '').replace(/_/g, ' '))}</option>`).join('')}</select></label>`;
   }
   _errBox() { return this._err ? `<div class="box err" style="padding:12px 14px"><div class="txt">${esc(this._err)}</div></div>` : ''; }
   _household(withAdd) {
@@ -525,7 +525,7 @@ ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" da
 <label class="f">Wer?<select data-f="add_person">${free.map((p) => `<option value="${esc(p.entity_id)}">${esc(p.name)}${p.me ? ' (Sie selbst)' : ''}</option>`).join('')}</select></label>
 <label class="f">So soll Werner die Person ansprechen<input type="text" data-f="add_name" maxlength="40" placeholder="z. B. Erika"></label>
 <div class="box info" style="padding:12px 14px"><div class="txt">Die Person muss <b>selbst zustimmen</b> – mit ihrer eigenen Anmeldung. Erst dann passt Werner auf sie auf. Sie bekommt einen Hinweis aufs Handy, wenn eines eingetragen ist.</div></div>
-${this._phoneSelect('add_notify', '')}${this._errBox()}
+${this._phoneSelect('add_notify', '', 'Handy der Person (dort fragt Werner nach)')}${this._errBox()}
 <button type="button" class="btn blue" data-act="add-res" ${this._busy ? 'disabled' : ''}>Eintragen</button><button type="button" class="btn" data-act="add-res-cancel">Abbrechen</button></section>`;
     } else if (free.length) {
       html += `<button type="button" class="btn dashed" data-act="add-res-open">+ Bewohner hinzufügen</button>`;
