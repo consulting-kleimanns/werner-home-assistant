@@ -1,0 +1,19 @@
+# Geheimnisse und lokale Konfiguration nie einchecken
+secrets.yaml
+*.env
+.env*
+*.bak*
+
+# Python
+__pycache__/
+*.pyc
+
+# Node / Build
+node_modules/
+dist/
+
+# Editor und System
+.DS_Store
+.vscode/
+.idea/
+*.swp
