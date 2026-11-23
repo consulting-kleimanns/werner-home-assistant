@@ -35,8 +35,8 @@ Werner gibt es heute in zwei Formen:
 |---|---|---|
 | Installation | Dateien kopieren | über HACS |
 | Bewohner anlegen | von Hand | Einrichtungs-Assistent |
-| Nachfragen und Vertrauenspersonen informieren | vorhanden | in Arbeit |
-| Wege: HA-App, Signal, E-Mail | vorhanden | in Arbeit |
+| Nachfragen und Vertrauenspersonen informieren | vorhanden | vorhanden, neustartfest |
+| Wege: HA-App, Signal, E-Mail | vorhanden | HA-App vorhanden, Signal und E-Mail in Arbeit |
 | Dashboard „Mein Zuhause“ | Karte von Hand einbinden | geplant: wird automatisch angelegt |
 | Mehrere Bewohner | nein | vorgesehen: ein Eintrag je Bewohner |
 | Kamera und Mikrofon (nur mit Zustimmung) | nein | geplant |
