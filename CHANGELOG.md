@@ -1,5 +1,12 @@
 # Änderungen
 
+## 0.7.1 – 2026-11-24
+
+- **Verständliche Nachrichten an Vertrauenspersonen.** Jede Nachricht (App, Signal, E-Mail) sagt jetzt: was los ist, warum gerade diese Person sie bekommt, was sie tun soll und was jede Antwort bewirkt (1 = Ich kümmere mich, 2 = Fehlalarm, 3 = Ich kann gerade nicht – mit Namen der nächsten Person).
+- Der Grund wird für Vertrauenspersonen in der dritten Person geschrieben („bei Erika“ statt „bei Ihnen“) und nennt Uhrzeit und Wartezeit der Nachfrage.
+- Test-Nachrichten erklären, wie ein echter Alarm abläuft.
+- „Werner einstellen“: Kurztexte je Weg erklären die Antworten; ein ausklappbares Beispiel zeigt, wie eine Nachricht an die Person aussieht.
+
 ## 0.7.0 – 2026-11-24
 - **E-Mail** als Weg zu den Vertrauenspersonen. Ein Helfer trägt einmal ein eigenes Postfach für Werner ein (Einstellen › Wer & wie, nur für Administratoren, mit Vorlagen für GMX, WEB.DE, Gmail, T-Online, Outlook und Test-E-Mail). Das Passwort liegt im Speicher von Home Assistant, nicht in einer Entität.
 - Antwort **per Klick in der E-Mail** (Ich kümmere mich, Fehlalarm, Kann nicht), wenn Home Assistant von außen erreichbar ist. Erst der Knopf auf der geöffneten Seite zählt, damit Virenscanner nichts auslösen. Die Links gelten nur für diesen einen Alarm.
