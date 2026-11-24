@@ -28,6 +28,7 @@ from .const import (
     CONF_PERSON,
     CONF_PV_KWP,
     CONF_PV_POWER,
+    CONF_SIGNAL_URL,
     CONF_SOURCES,
     CONF_VEHICLE_NAME,
     CONF_VEHICLE_SOC,
@@ -156,6 +157,7 @@ class WernerOptionsFlow(OptionsFlow):
                 vol.Optional(CONF_VEHICLE_NAME): selector.TextSelector(),
                 vol.Optional(CONF_VEHICLE_SOC): entity("sensor"),
                 vol.Optional(CONF_CHARGE_MODE): entity(["select", "input_select"]),
+                vol.Optional(CONF_SIGNAL_URL): selector.TextSelector(),
             }
         )
         return self.async_show_form(

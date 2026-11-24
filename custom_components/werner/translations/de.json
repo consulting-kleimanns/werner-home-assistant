@@ -38,7 +38,8 @@
           "battery_soc": "Ladestand der Batterie",
           "vehicle_name": "Name des Autos",
           "vehicle_soc": "Akku des Autos",
-          "charge_mode": "Lademodus (evcc)"
+          "charge_mode": "Lademodus (evcc)",
+          "signal_url": "Adresse der Signal-App"
         },
         "data_description": {
           "activity_sources": "Jede Änderung zählt als Aktivität. Bei Zahlen wie der Leistung zählt nur ein Anstieg über die Grundlast.",
@@ -46,7 +47,8 @@
           "weather": "Für die Sonnen-Tipps im Bildschirm Energie.",
           "grid_power": "Aktuelle Leistung aus dem Netz, z. B. vom Stromzähler.",
           "pv_kwp": "Spitzenleistung des Balkonkraftwerks oder der Dachanlage, für die Sonnen-Schätzung.",
-          "charge_mode": "Die Auswahl des Lademodus am Ladepunkt, z. B. von evcc."
+          "charge_mode": "Die Auswahl des Lademodus am Ladepunkt, z. B. von evcc.",
+          "signal_url": "Leer lassen: Werner findet die App „Signal Messenger“ selbst. Sonst z. B. http://<app>:8080."
         }
       }
     }

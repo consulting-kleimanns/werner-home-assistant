@@ -3,6 +3,7 @@
   "name": "Werner",
   "after_dependencies": [
     "frontend",
+    "hassio",
     "http",
     "logbook",
     "mobile_app",
@@ -21,5 +22,5 @@
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/consulting-kleimanns/werner-home-assistant/issues",
   "requirements": [],
-  "version": "0.4.0"
+  "version": "0.5.0"
 }

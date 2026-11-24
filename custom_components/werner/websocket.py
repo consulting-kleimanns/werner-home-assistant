@@ -21,6 +21,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 
+from .signal_messenger import SignalError, get_client
+
 from .const import (
     CONF_BASELOAD,
     CONF_CONSENT,
@@ -53,6 +55,8 @@ def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_set_sources)
     websocket_api.async_register_command(hass, ws_energy)
     websocket_api.async_register_command(hass, ws_set_energy)
+    websocket_api.async_register_command(hass, ws_signal_status)
+    websocket_api.async_register_command(hass, ws_signal_qr)
 
 
 # ------------------------------------------------------------------ Hilfen
@@ -478,3 +482,47 @@ def ws_set_energy(hass: HomeAssistant, connection: websocket_api.ActiveConnectio
             options[key] = value
     hass.config_entries.async_update_entry(entry, options=options)
     connection.send_result(msg["id"], {})
+
+
+# ------------------------------------------------------------------- Signal
+
+
+def _has_resident(hass: HomeAssistant, user_id: str, is_admin: bool) -> bool:
+    return is_admin or any(_is_own(hass, e, user_id) for e in _entries(hass))
+
+
+@websocket_api.websocket_command({vol.Required("type"): "werner/signal/status"})
+@websocket_api.async_response
+async def ws_signal_status(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Ist die Signal-App da, und ist ein Konto verbunden? Die Nummer bleibt verborgen."""
+    if not _has_resident(hass, connection.user.id, connection.user.is_admin):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Nur für Bewohner.")
+        return
+    client = get_client(hass)
+    url = await client.async_url()
+    if not url:
+        connection.send_result(msg["id"], {"available": False, "connected": False, "text": "Die Signal-App ist nicht installiert."})
+        return
+    try:
+        accounts = await client.async_accounts()
+    except SignalError as err:
+        connection.send_result(msg["id"], {"available": False, "connected": False, "text": str(err)})
+        return
+    connection.send_result(msg["id"], {"available": True, "connected": bool(accounts), "text": ""})
+
+
+@websocket_api.websocket_command({vol.Required("type"): "werner/signal/qr"})
+@websocket_api.async_response
+async def ws_signal_qr(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """QR-Code zum Verbinden als Bild (base64)."""
+    if not _has_resident(hass, connection.user.id, connection.user.is_admin):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Nur für Bewohner.")
+        return
+    try:
+        png = await get_client(hass).async_qr()
+    except SignalError as err:
+        connection.send_error(msg["id"], ERR_INVALID, str(err))
+        return
+    import base64  # noqa: PLC0415
+
+    connection.send_result(msg["id"], {"image": "data:image/png;base64," + base64.b64encode(png).decode()})

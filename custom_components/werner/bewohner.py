@@ -8,6 +8,7 @@ nach einem Neustart von Home Assistant fortgesetzt.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from collections.abc import Callable, Coroutine
 from datetime import datetime, timedelta
 import logging
@@ -24,6 +25,8 @@ from homeassistant.helpers.event import (
     async_track_time_interval,
 )
 from homeassistant.util import dt as dt_util
+
+from .signal_messenger import SignalError, get_client, normalize_number
 
 from .const import (
     ACTION_FALSE_ALARM,
@@ -75,6 +78,7 @@ PROC_ASK = "ask"
 PROC_ESCALATE = "escalate"
 
 WAY_LABELS = {WAY_SIGNAL: "Signal", WAY_MAIL: "E-Mail"}
+SIGNAL_ANSWERS = {"1": "take", "2": "false_alarm", "3": "next"}
 
 _BAD_STATES = (STATE_UNAVAILABLE, STATE_UNKNOWN)
 
@@ -486,6 +490,8 @@ class Bewohner:
 
     async def _contact(self, n: int, person: dict[str, str], reason: str) -> str | None:
         """Eine Vertrauensperson informieren. Antwort: take, false_alarm, next oder None."""
+        if person["way"] == WAY_SIGNAL:
+            return await self._contact_signal(n, person, reason)
         if person["way"] != WAY_APP:
             label = WAY_LABELS.get(person["way"], person["way"])
             self.log(
@@ -531,6 +537,60 @@ class Bewohner:
             {take: "take", false_alarm: "false_alarm", nxt: "next"}, CONTACT_WAIT_MINUTES * 60
         )
 
+    async def _contact_signal(self, n: int, person: dict[str, str], reason: str) -> str | None:
+        """Per Signal informieren und auf die Antwort 1, 2 oder 3 warten."""
+        if not person["phone"]:
+            self.log(f"{person['name']}: keine Handynummer für Signal eingetragen – nächste Person.")
+            return None
+        what = "braucht Hilfe" if self.status == STATUS_HELP else "antwortet nicht"
+        text = (
+            f"Werner: {self.name} {what}.\n{reason}\n\n"
+            f"Sie sind Vertrauensperson Nr. {n} von {self.name}. Bitte antworten Sie mit\n"
+            "1 = Ich kümmere mich\n2 = Fehlalarm\n3 = Kann nicht\n\n"
+            f"Ohne Antwort informiert Werner in {CONTACT_WAIT_MINUTES} Minuten die nächste Person. "
+            "Im Notfall: 112."
+        )
+        client = get_client(self.hass)
+        future: asyncio.Future[str | None] = self.hass.loop.create_future()
+        expected = normalize_number(person["phone"])
+
+        @callback
+        def _on_reply(source: str, message: str) -> None:
+            answer = SIGNAL_ANSWERS.get(message.strip()[:1])
+            if source == expected and answer and not future.done():
+                future.set_result(answer)
+
+        unsub = client.async_listen(_on_reply)
+        try:
+            try:
+                await client.async_send(person["phone"], text)
+            except SignalError as err:
+                self.log(f"{person['name']} per Signal nicht erreichbar: {err} Nächste Person.")
+                return None
+            self.log(f"informiert {person['name']} (Platz {n}) per Signal.")
+
+            @callback
+            def _on_timeout(_now: datetime) -> None:
+                if not future.done():
+                    future.set_result(None)
+
+            unsub_timer = async_call_later(self.hass, CONTACT_WAIT_MINUTES * 60, _on_timeout)
+            try:
+                answer = await future
+            finally:
+                unsub_timer()
+            if answer:
+                with contextlib.suppress(SignalError):
+                    await client.async_send(
+                        person["phone"],
+                        {"take": "Danke, Werner hat es notiert. Sie kümmern sich.",
+                         "false_alarm": "Danke, Werner hat es notiert: Fehlalarm.",
+                         "next": "Danke, Werner informiert die nächste Person."}[answer],
+                    )
+            return answer
+        finally:
+            unsub()
+
     async def async_test_person(self, n: int) -> dict[str, Any]:
         """Test-Nachricht an Vertrauensperson n schicken (Knopf in „Einstellen“)."""
         person = self.person_settings(n)
@@ -538,6 +598,21 @@ class Bewohner:
             return {"ok": False, "text": "Für diese Person ist noch kein Name eingetragen."}
         if person["way"] == WAY_OFF:
             return {"ok": False, "text": "Für diese Person ist „Nicht melden“ gewählt."}
+        if person["way"] == WAY_SIGNAL:
+            if not person["phone"]:
+                return {"ok": False, "text": "Bitte zuerst eine Handynummer eintragen."}
+            try:
+                await get_client(self.hass).async_send(
+                    person["phone"],
+                    f"Test von Werner: {self.name} hat Sie als {n}. Vertrauensperson eingetragen. "
+                    "Das ist nur ein Test – es ist alles in Ordnung. Bei einem echten Alarm "
+                    "antworten Sie mit 1, 2 oder 3.",
+                )
+            except SignalError as err:
+                self.log(f"Test-Nachricht an {person['name']} per Signal fehlgeschlagen.")
+                return {"ok": False, "text": str(err)}
+            self.log(f"Test-Nachricht an {person['name']} per Signal gesendet.")
+            return {"ok": True, "text": "Per Signal gesendet. Fragen Sie kurz nach, ob sie angekommen ist."}
         if person["way"] != WAY_APP:
             label = WAY_LABELS.get(person["way"], person["way"])
             return {"ok": False, "text": f"{label} kommt in einer der nächsten Versionen."}
