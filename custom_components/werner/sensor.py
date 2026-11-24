@@ -50,6 +50,7 @@ class StatusSensor(WernerEntity, SensorEntity, RestoreEntity):
         b = self.bewohner
         return {
             "reason": b.reason,
+            "about": b.about,
             "procedure": b.procedure,
             "person_index": b.person_index,
             "resident": b.name,
