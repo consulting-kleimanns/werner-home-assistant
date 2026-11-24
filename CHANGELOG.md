@@ -1,6 +1,6 @@
 # Änderungen
 
-## 0.7.0 – unveröffentlicht
+## 0.7.0 – 2026-11-24
 - **E-Mail** als Weg zu den Vertrauenspersonen. Ein Helfer trägt einmal ein eigenes Postfach für Werner ein (Einstellen › Wer & wie, nur für Administratoren, mit Vorlagen für GMX, WEB.DE, Gmail, T-Online, Outlook und Test-E-Mail). Das Passwort liegt im Speicher von Home Assistant, nicht in einer Entität.
 - Antwort **per Klick in der E-Mail** (Ich kümmere mich, Fehlalarm, Kann nicht), wenn Home Assistant von außen erreichbar ist. Erst der Knopf auf der geöffneten Seite zählt, damit Virenscanner nichts auslösen. Die Links gelten nur für diesen einen Alarm.
 - Karte einstellbar: `screen`, `hide_tabs`, `resident`.
