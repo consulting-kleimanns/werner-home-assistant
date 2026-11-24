@@ -48,7 +48,7 @@
           "grid_power": "Aktuelle Leistung aus dem Netz, z. B. vom Stromzähler.",
           "pv_kwp": "Spitzenleistung des Balkonkraftwerks oder der Dachanlage, für die Sonnen-Schätzung.",
           "charge_mode": "Die Auswahl des Lademodus am Ladepunkt, z. B. von evcc.",
-          "signal_url": "Leer lassen: Werner findet die App „Signal Messenger“ selbst. Sonst z. B. http://<app>:8080."
+          "signal_url": "Leer lassen: Werner findet die App „Signal Messenger“ selbst. Sonst z. B. http://app-name:8080."
         }
       }
     }

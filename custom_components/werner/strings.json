@@ -48,7 +48,7 @@
           "grid_power": "Current power from the grid, e.g. from the power meter.",
           "pv_kwp": "Peak power of the balcony or rooftop system, for the solar estimate.",
           "charge_mode": "The charging mode select of the charging point, e.g. from evcc.",
-          "signal_url": "Leave empty: Werner finds the Signal Messenger app by itself. Otherwise e.g. http://<app>:8080."
+          "signal_url": "Leave empty: Werner finds the Signal Messenger app by itself. Otherwise e.g. http://app-name:8080."
         }
       }
     }
