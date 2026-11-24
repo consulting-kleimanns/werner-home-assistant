@@ -83,7 +83,12 @@ async def test_alarm_per_mail_mit_antwort(hass: HomeAssistant, entry, notify_eri
     assert len(sent) == 1
     text = sent[0]["text"]
     assert "Sabine" in text and "112" in text
-    link = next(line.split(": ", 1)[1] for line in text.splitlines() if line.startswith("Fehlalarm: "))
+    assert "Warum bekommen Sie diese E-Mail?" in text and "Werner beendet den Alarm." in text
+    link = next(
+        line.split(": ", 1)[1]
+        for line in text.splitlines()
+        if line.startswith("Fehlalarm, alles in Ordnung: ")
+    )
     path = link.removeprefix("https://werner.example.org")
 
     client = await hass_client_no_auth()
