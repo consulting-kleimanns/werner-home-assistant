@@ -11,7 +11,7 @@
  * können zwischen den Bewohnern umschalten. Alle Werte kommen aus den Entitäten
  * der Integration; was nicht eingerichtet ist, wird ausgeblendet oder zeigt „–“.
  */
-const WERNER_UI_VERSION = '0.5.0';
+const WERNER_UI_VERSION = '0.6.0';
 
 const C = {
   bg: '#F5F2EA', ink: '#1E2421', muted: '#55605A', line: '#E2DDD1', blue: '#1F4E79', blueBg: '#E6EEF6', blueInk: '#12324F',
@@ -76,6 +76,7 @@ h1.big{font-size:30px}
 .badge{align-self:flex-start;font-size:14px;font-weight:700;border-radius:10px;padding:4px 10px}
 .badge.ok,.badge.warn,.badge.grey{border:none}
 .icon-btn{width:48px;height:48px;border-radius:12px;border:1px solid ${C.line};background:#FFF;color:${C.ink};font-size:20px}
+.edit{min-height:52px;border-radius:12px;border:1px solid ${C.line};background:#FFF;color:${C.blue};font-size:16px;font-weight:700;padding:8px 12px}
 .link{min-height:48px;padding:0 14px;border-radius:12px;border:1px solid ${C.line};background:#FFF;color:${C.red};font-size:15px}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:14px;color:${C.muted}}
 label.f input,label.f select{min-height:48px;border:1px solid #C9C3B5;border-radius:12px;padding:0 12px;font-size:16px;color:${C.ink};background:#FBFAF7;width:100%}
@@ -109,6 +110,27 @@ const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&':
 const BAD = ['unavailable', 'unknown', '', undefined, null];
 const fmtW = (w) => { const n = Number(w); if (!isFinite(n)) return '–'; return Math.abs(n) >= 1000 ? (n / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' kW' : Math.round(n) + ' W'; };
 const fmtNum = (v, unit, digits = 0) => { const n = Number(v); if (!isFinite(n)) return '–'; return n.toLocaleString('de-DE', { maximumFractionDigits: digits }) + (unit ? ' ' + unit : ''); };
+// Aktueller Wert einer Entität in einfachen Worten – damit man in der Auswahl erkennt, was was ist.
+const MOTION = ['motion', 'occupancy', 'presence', 'moving', 'vibration'];
+const OPENING = ['door', 'window', 'opening', 'garage_door'];
+const MEDIA = { playing: 'spielt', paused: 'Pause', idle: 'bereit', on: 'an', off: 'aus', standby: 'aus', buffering: 'lädt' };
+function fmtState(st) {
+  if (!st || BAD.includes(st.state)) return 'nicht erreichbar';
+  const a = st.attributes || {}; const dc = a.device_class; const unit = a.unit_of_measurement || '';
+  const domain = st.entity_id.split('.')[0];
+  if (domain === 'binary_sensor') {
+    const on = st.state === 'on';
+    if (MOTION.includes(dc)) return on ? 'Bewegung erkannt' : 'ruhig';
+    if (OPENING.includes(dc)) return on ? 'offen' : 'zu';
+    return on ? 'an' : 'aus';
+  }
+  if (domain === 'media_player') return MEDIA[st.state] || st.state;
+  if (domain === 'weather') return (COND[st.state] || st.state) + (a.temperature != null ? ', ' + fmtNum(a.temperature, a.temperature_unit || '°C', 0) : '');
+  const n = Number(st.state);
+  if (dc === 'power' && isFinite(n)) return fmtW(unit === 'kW' ? n * 1000 : n);
+  if (isFinite(n) && st.state !== '') return fmtNum(n, unit, Math.abs(n) < 10 ? 1 : 0);
+  return st.state;
+}
 const hm = (d) => d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 const COND = { sunny: 'Sonnig', 'clear-night': 'Klar', partlycloudy: 'Wolkig', cloudy: 'Bedeckt', fog: 'Nebel', rainy: 'Regen', pouring: 'Starkregen', snowy: 'Schnee', 'snowy-rainy': 'Schneeregen', lightning: 'Gewitter', 'lightning-rainy': 'Gewitter', windy: 'Windig', 'windy-variant': 'Windig', hail: 'Hagel', exceptional: 'Unwetter' };
 
@@ -143,6 +165,10 @@ class WernerMeinZuhause extends HTMLElement {
   constructor() {
     super();
     this._ui = { tab: 'start', sub: 'wer', sheet: null, day: 0, adding: null };
+    // Direktlink aus „Code auf anderem Gerät zeigen“: …/werner?signal=1
+    try {
+      if (new URLSearchParams(window.location.search).get('signal') === '1') { this._ui.tab = 'einstellen'; this._ui.sub = 'wer'; this._sgAuto = true; }
+    } catch (e) { /* ohne Adresse (z. B. als Karte) egal */ }
     this._tests = {};
     this._sig = '';
     this._log = null;
@@ -171,7 +197,7 @@ class WernerMeinZuhause extends HTMLElement {
     }
     this._render(false);
   }
-  disconnectedCallback() { this._unsubForecast(); }
+  disconnectedCallback() { this._unsubForecast(); this._sgStopPoll(); }
 
   /* ---------- Bewohner und Entitäten ---------- */
   _residents() {
@@ -278,9 +304,11 @@ class WernerMeinZuhause extends HTMLElement {
     this._r = r;
     const ids = r ? Object.values(r.attributes.entities || {}) : [];
     const en = r ? Object.values(this._energy()).filter((v) => typeof v === 'string' && v.includes('.')) : [];
+    // In der Geräte-Auswahl die Werte von gerade eben mitlaufen lassen (alle 10 Sekunden).
+    const tick = this._ui.tab === 'einstellen' && this._ui.sub === 'sensoren' ? Math.floor(Date.now() / 10000) : '';
     const sig = (r ? r.state + JSON.stringify(r.attributes) : '') + ids.concat(en).map((i) => this._h.states[i] && this._h.states[i].state).join('|')
       + (r && this._h.states[r.attributes.person] ? this._h.states[r.attributes.person].state : '')
-      + JSON.stringify(this._ui) + JSON.stringify(this._tests) + JSON.stringify(this._hh || null) + JSON.stringify(this._src || null) + JSON.stringify(this._en || null) + JSON.stringify(this._sg || null) + (this._busy ? 'B' : '') + (this._err || '') + (this._log ? this._log.length : -1) + (this._fc ? this._fc.length : 0) + (this._who || '');
+      + JSON.stringify(this._ui) + JSON.stringify(this._tests) + JSON.stringify(this._hh || null) + JSON.stringify(this._src || null) + JSON.stringify(this._en || null) + JSON.stringify(this._sg || null) + (this._busy ? 'B' : '') + (this._err || '') + (this._log ? this._log.length : -1) + (this._fc ? this._fc.length : 0) + (this._who || '') + tick;
     if (!force && sig === this._sig) return;
     this._sig = sig;
 
@@ -340,6 +368,29 @@ class WernerMeinZuhause extends HTMLElement {
   }
 
   /* ---------- Start ---------- */
+  /* ---------- Einrichtung: was noch fehlt ---------- */
+  _setup() {
+    const r = this._r; const people = this._people().filter((p) => p.name && p.way !== 'off');
+    const items = [
+      { ok: !!r.attributes.notify, sub: 'bewohner', done: 'Ihr Handy ist verbunden', todo: 'Ihr Handy wählen – dort fragt Werner zuerst nach' },
+      { ok: people.length > 0, sub: 'wer', done: 'Vertrauensperson eingetragen', todo: 'Eine Vertrauensperson eintragen' },
+      { ok: (r.attributes.sources || []).length > 0, sub: 'sensoren', done: 'Werner weiß, woran er Aktivität erkennt', todo: 'Wählen, woran Werner merkt, dass Sie aktiv sind' }
+    ];
+    if (people.some((p) => p.way === 'signal')) {
+      if (!this._sg && !this._sgQuietT) { this._sgQuietT = Date.now(); this._h.callWS({ type: 'werner/signal/status' }).then((st) => { if (!this._sg) { this._sg = st; this._render(true); } }).catch(() => {}); }
+      items.push({ ok: !!(this._sg && this._sg.connected), sub: 'wer', done: 'Signal ist verbunden', todo: 'Signal mit Werner verbinden' });
+    }
+    return { items, open: items.filter((i) => !i.ok).length };
+  }
+  _setupCard(compact) {
+    const st = this._setup();
+    if (!st.open) return '';
+    if (compact) return `<section class="box warn" aria-label="Einrichtung"><div class="t-m">Noch ${st.open === 1 ? 'ein Schritt' : st.open + ' Schritte'}, dann passt Werner richtig auf</div><button type="button" class="btn" data-goto="${st.items.find((i) => !i.ok).sub}">Jetzt einrichten</button></section>`;
+    return `<section class="card" aria-label="Einrichtung"><div class="t-m">So weit ist Werner eingerichtet</div>${st.items.map((i) => i.ok
+      ? `<div class="row" style="gap:10px"><span aria-hidden="true" style="color:${C.green};font-size:22px;font-weight:700;width:28px">✓</span><span class="txt">${esc(i.done)}</span></div>`
+      : `<button type="button" class="edit" style="display:flex;gap:10px;align-items:center;text-align:left" data-goto="${i.sub}"><span aria-hidden="true" style="font-size:22px;width:28px">○</span><span>${esc(i.todo)} ›</span></button>`).join('')}</section>`;
+  }
+
   _start() {
     const now = new Date(); const h = now.getHours();
     const gruss = h < 11 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend';
@@ -357,7 +408,7 @@ class WernerMeinZuhause extends HTMLElement {
     if (this._hasCar()) { const v = e.vehicle_soc ? this._entNum(e.vehicle_soc) : null; tiles.push(`<button type="button" class="tile" data-tab="auto"><span class="l">${esc(e.vehicle_name || 'Auto')}</span><span class="v">${v == null ? 'Laden' : fmtNum(v, '%')}</span><span class="s" style="color:${C.blue};font-weight:700">Ändern ›</span></button>`); }
     return `<header style="display:flex;flex-direction:column;gap:10px"><div class="date">${esc(now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }))}</div>
 <h1 class="big">${gruss}, ${esc(this._r.attributes.resident)}</h1><button type="button" class="pill ${w.cls === 'err' ? 'red' : w.cls}" data-tab="werner">${esc(w.pill)}</button></header>${emp}
-${tiles.length ? `<div class="grid2">${tiles.join('')}</div>` : ''}`;
+${this._setupCard(true)}${tiles.length ? `<div class="grid2">${tiles.join('')}</div>` : ''}`;
   }
 
   /* ---------- Werner ---------- */
@@ -431,7 +482,7 @@ ${sorted.map((o) => { const m = MODES[o] || [o, '']; const on = modeEnt.state ==
     const body = sub === 'wann' ? this._wann() : sub === 'sensoren' ? this._sensoren() : sub === 'bewohner' ? this._bewohner() : this._wer();
     return `<h1>Werner einstellen</h1><div class="muted">${multi ? 'Das sind Ihre Einstellungen, ' + esc(this._r.attributes.resident) + '. Nur Sie sehen und ändern sie.' : 'Sie bestimmen, wer wie und wann informiert wird.'}</div>
 <button type="button" class="btn" style="min-height:52px;color:${C.blue}" data-act="info">So funktioniert Werner</button>
-<div class="sub" role="tablist" aria-label="Bereiche">${tabs}</div>${body}`;
+${this._setupCard(false)}<div class="sub" role="tablist" aria-label="Bereiche">${tabs}</div>${body}`;
   }
 
   _wer() {
@@ -459,7 +510,7 @@ ${t && t !== 'busy' ? `<div class="box ${t.ok ? 'ok' : 'err'}" style="padding:10
 <button type="button" class="icon-btn" aria-label="Weiter nach unten" data-move="${p.n}|1" ${i === filled.length - 1 ? 'disabled' : ''}>↓</button></div></div>`;
     }).join('');
     const free = people.find((p) => !p.name && this._ui.adding !== p.n);
-    const sig = people.some((p) => p.name && p.way === 'signal') ? this._signalCard() : '';
+    const sig = (people.some((p) => p.name && p.way === 'signal') || this._sgAuto || (this._sg && (this._sg.image || this._ui.sgOther))) ? this._signalCard() : '';
     return `${sig}<div class="txt">Zuerst fragt Werner <b>immer Sie selbst</b> – auf Ihrem Handy. Antworten Sie nicht, informiert er nacheinander:</div>
 ${cards}
 ${!filled.length ? `<div class="box warn"><div class="txt">Niemand eingetragen: Werner fragt nur Sie selbst und informiert sonst niemanden.</div></div>` : ''}
@@ -500,9 +551,9 @@ ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" da
   }
 
   /* ---------- Bewohner (Selbstbestimmung) ---------- */
-  _phoneSelect(field, current, label) {
+  _phoneSelect(field, current, label, auto) {
     const phones = (this._hh && this._hh.phones) || [];
-    return `<label class="f">${label || 'Mein Handy (dort fragt Werner nach)'}<select data-f="${field}"><option value="">– kein Handy –</option>${phones.map((s) => `<option value="${esc(s)}" ${current === s ? 'selected' : ''}>${esc(s.replace('mobile_app_', '').replace(/_/g, ' '))}</option>`).join('')}</select></label>`;
+    return `<label class="f">${label || 'Mein Handy (dort fragt Werner nach)'}<select data-f="${field}">${auto ? '<option value="__auto" selected>Automatisch: das Handy der Person</option>' : ''}<option value="">– kein Handy –</option>${phones.map((s) => `<option value="${esc(s)}" ${current === s ? 'selected' : ''}>${esc(s.replace('mobile_app_', '').replace(/_/g, ' '))}</option>`).join('')}</select></label>`;
   }
   async _loadSources() {
     const id = this._r.attributes.entry_id; this._srcFor = id; this._src = this._src || null;
@@ -527,7 +578,7 @@ ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" da
       const items = s.candidates.filter((c) => c.group === g);
       if (!items.length) continue; any = true;
       html += `<div style="border-top:1px solid #EFEBE2;padding-top:10px;display:flex;flex-direction:column;gap:8px"><div><div style="font-size:17px;font-weight:700">${title}</div><div class="small">${text}</div></div>`;
-      html += items.map((c) => { const on = chosen.has(c.entity_id); const val = BAD.includes(c.state) ? 'nicht erreichbar' : c.group === 'strom' ? fmtW(c.state) : ''; return `<div class="between"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:16px">${esc(c.name)}</span>${val ? `<span class="small">${esc(val)}</span>` : ''}</span><button type="button" class="sw ${on ? 'on' : ''}" role="switch" aria-checked="${on}" aria-label="${esc(c.name)}" data-src="${esc(c.entity_id)}"><span></span></button></div>`; }).join('');
+      html += items.map((c) => { const on = chosen.has(c.entity_id); const val = fmtState(this._h.states[c.entity_id]); const sub = [c.area, 'gerade: ' + val].filter(Boolean).join(' · '); return `<div class="between"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:16px">${esc(c.name)}</span><span class="small">${esc(sub)}</span></span><button type="button" class="sw ${on ? 'on' : ''}" role="switch" aria-checked="${on}" aria-label="${esc(c.name)}" data-src="${esc(c.entity_id)}"><span></span></button></div>`; }).join('');
       html += '</div>';
     }
     if (!any) html += `<div class="box warn"><div class="txt">Werner hat keine passenden Geräte gefunden. Ein Helfer kann einen Stromzähler oder Bewegungsmelder anschließen – auswählen können Sie ihn dann hier selbst.</div></div>`;
@@ -554,7 +605,7 @@ ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" da
 <label class="f">Wer?<select data-f="add_person">${free.map((p) => `<option value="${esc(p.entity_id)}">${esc(p.name)}${p.me ? ' (Sie selbst)' : ''}</option>`).join('')}</select></label>
 <label class="f">So soll Werner die Person ansprechen<input type="text" data-f="add_name" maxlength="40" placeholder="z. B. Erika"></label>
 <div class="box info" style="padding:12px 14px"><div class="txt">Die Person muss <b>selbst zustimmen</b> – mit ihrer eigenen Anmeldung. Erst dann passt Werner auf sie auf. Sie bekommt einen Hinweis aufs Handy, wenn eines eingetragen ist.</div></div>
-${this._phoneSelect('add_notify', '', 'Handy der Person (dort fragt Werner nach)')}${this._errBox()}
+${this._phoneSelect('add_notify', '', 'Handy der Person (dort fragt Werner nach)', true)}${this._errBox()}
 <button type="button" class="btn blue" data-act="add-res" ${this._busy ? 'disabled' : ''}>Eintragen</button><button type="button" class="btn" data-act="add-res-cancel">Abbrechen</button></section>`;
     } else if (free.length) {
       html += `<button type="button" class="btn dashed" data-act="add-res-open">+ Bewohner hinzufügen</button>`;
@@ -574,7 +625,7 @@ ${this._phoneSelect('add_notify', '', 'Handy der Person (dort fragt Werner nach)
     else mine = `<section class="card" aria-label="Werner für mich einschalten"><div class="t-l">Werner für mich einschalten</div>
 <ul style="margin:0;padding-left:22px;font-size:17px;line-height:1.45"><li>Werner passt auf, ob bei Ihnen alles in Ordnung ist.</li><li>Ist es ungewöhnlich still, fragt Werner <b>zuerst Sie</b>.</li><li>Wen Werner danach informiert, bestimmen Sie selbst.</li><li>Sie können Werner jederzeit pausieren oder wieder beenden.</li></ul>
 <label class="f">So soll Werner Sie ansprechen<input type="text" data-f="my_name" maxlength="40" value="${esc(name)}"></label>
-${this._phoneSelect('my_notify', '')}${this._errBox()}
+${this._phoneSelect('my_notify', me.phone || '')}${me.phone ? '<div class="small">Werner hat Ihr Handy schon gefunden.</div>' : ''}${this._errBox()}
 <button type="button" class="btn green" data-act="add-me" ${this._busy ? 'disabled' : ''}>Werner einschalten</button></section>`;
     return `<h1>Willkommen bei Werner</h1><div class="muted">Sie entscheiden selbst, ob und wie Werner auf Sie aufpasst.</div>${mine}${hh && !hh.error ? this._household(true) : ''}`;
   }
@@ -666,11 +717,12 @@ ${li('Sie bestimmen alles selbst: <b>wer</b>, <b>wie</b> und <b>wann</b>. Das st
   }
   _sheetEnergy() {
     const e = this._en;
-    let inner = `<div style="font-size:26px;font-weight:700;line-height:1.2">Was die Energie-Anzeige zeigt</div><div class="small">Sie wählen selbst. „– nicht zeigen –“ blendet ein Feld aus.</div>`;
+    let inner = `<div style="font-size:26px;font-weight:700;line-height:1.2">Was die Energie-Anzeige zeigt</div><div class="small">Sie wählen selbst. Hinter jedem Gerät steht der Wert von gerade eben – so erkennen Sie das richtige. „– nicht zeigen –“ blendet ein Feld aus.</div>`;
     if (!e) inner += '<div class="muted">Wird geladen …</div>';
     else if (e.error) inner += `<div class="box err"><div class="txt">${esc(e.error)}</div></div>`;
     else {
-      const sel = (key, label) => { const opts = e.candidates[key] || []; const cur = e.current[key] || ''; return `<label class="f">${label}<select data-f="en_${key}"><option value="">– nicht zeigen –</option>${opts.map((o) => `<option value="${esc(o.entity_id)}" ${cur === o.entity_id ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}${cur && !opts.some((o) => o.entity_id === cur) ? `<option value="${esc(cur)}" selected>${esc(cur)}</option>` : ''}</select></label>`; };
+      const optLabel = (o) => [o.name, o.area, fmtState(this._h.states[o.entity_id])].filter(Boolean).join(' · ');
+      const sel = (key, label) => { const opts = e.candidates[key] || []; const cur = e.current[key] || ''; const now = cur ? fmtState(this._h.states[cur]) : ''; return `<label class="f">${label}<select data-f="en_${key}"><option value="">– nicht zeigen –</option>${opts.map((o) => `<option value="${esc(o.entity_id)}" ${cur === o.entity_id ? 'selected' : ''}>${esc(optLabel(o))}</option>`).join('')}${cur && !opts.some((o) => o.entity_id === cur) ? `<option value="${esc(cur)}" selected>${esc(cur)}</option>` : ''}</select>${cur ? `<span class="small" style="font-weight:400">Gerade: ${esc(now)}</span>` : ''}</label>`; };
       inner += sel('weather', 'Wettervorhersage') + sel('grid_power', 'Strom aus dem Netz (gerade)') + sel('grid_energy', 'Zählerstand') + sel('pv_power', 'Sonnenstrom (gerade)')
         + `<label class="f">Größe der Solaranlage in kWp (für die Sonnen-Schätzung)<input type="number" inputmode="decimal" step="0.1" min="0" data-f="en_pv_kwp" value="${esc(e.current.pv_kwp || '')}" placeholder="z. B. 1,5"></label>`
         + sel('battery_soc', 'Batterie (Ladestand)')
@@ -694,24 +746,62 @@ ${li('Sie bestimmen alles selbst: <b>wer</b>, <b>wie</b> und <b>wann</b>. Das st
     try {
       const st = await this._h.callWS({ type: 'werner/signal/status' });
       let image = (this._sg && this._sg.image) || null;
-      if (qr && st.available && !st.connected) image = (await this._h.callWS({ type: 'werner/signal/qr' })).image;
+      if (qr && st.available && !st.connected) { image = (await this._h.callWS({ type: 'werner/signal/qr' })).image; this._ui.sgOther = false; }
       this._sg = Object.assign({}, st, { image: st.connected ? null : image, busy: false, checked: !qr && !!(this._sg && this._sg.image), t: Date.now() });
+      if (st.connected) { this._ui.sgOther = false; this._sgAuto = false; }
     } catch (err) { this._sg = Object.assign({}, this._sg, { busy: false, err: err.message || String(err) }); }
+    if (this._sg.image || this._ui.sgOther) this._sgStartPoll(); else this._sgStopPoll();
     this._render(true);
   }
+  // Während ein Code gezeigt wird (hier oder auf dem anderen Gerät), schaut Werner selbst nach, ob es geklappt hat.
+  _sgStartPoll() {
+    if (this._sgTimer) return;
+    this._sgUntil = Date.now() + 10 * 60 * 1000;
+    this._sgTimer = setInterval(async () => {
+      if (Date.now() > this._sgUntil || !this.isConnected) { this._sgStopPoll(); return; }
+      try {
+        const st = await this._h.callWS({ type: 'werner/signal/status' });
+        if (st.connected) { this._sg = Object.assign({}, st, { image: null, busy: false }); this._ui.sgOther = false; this._sgAuto = false; this._sgStopPoll(); this._render(true); }
+      } catch (e) { /* nächster Versuch */ }
+    }, 4000);
+  }
+  _sgStopPoll() { if (this._sgTimer) { clearInterval(this._sgTimer); this._sgTimer = null; } }
+  _isPhone() {
+    try { return window.matchMedia('(pointer: coarse)').matches && Math.min(window.screen.width, window.screen.height) < 600; } catch (e) { return false; }
+  }
+  _sgLink() { return window.location.origin + '/werner?signal=1'; }
   _signalCard() {
     const s = this._sg;
-    if (!s) { this._sg = { busy: true }; setTimeout(() => this._loadSignal(false)); return '<div class="muted">Signal wird geprüft …</div>'; }
+    if (!s) { this._sg = { busy: true }; setTimeout(() => this._loadSignal(!!this._sgAuto && !this._isPhone())); return '<div class="muted">Signal wird geprüft …</div>'; }
     if (s.busy && !s.image) return `<div class="card" style="align-items:center;text-align:center"><div class="t-m">Einen Moment …</div><div class="txt">Werner fragt die Signal-App. Ein neuer Code kann bis zu 30 Sekunden dauern.</div></div>`;
     if (s.err) return `<div class="box err"><div class="txt">${esc(s.err)}</div><button type="button" class="btn" data-act="sg-check">Noch einmal versuchen</button></div>`;
     if (!s.available) return `<div class="box warn"><div class="t-m">Signal ist noch nicht eingerichtet</div><div class="txt">Dafür fehlt die App „Signal Messenger“ in Home Assistant. Die installiert einmal ein Helfer – verbinden können Sie Signal dann hier selbst.</div></div>`;
-    if (s.connected) return `<div class="box ok"><div class="t-m">Signal ist verbunden</div><div class="txt">Werner schreibt Ihren Vertrauenspersonen über Signal. Sie antworten mit 1, 2 oder 3.</div></div>`;
-    if (!s.image) return `<div class="box warn" style="gap:10px"><div class="t-m">Signal ist noch nicht verbunden</div><div class="txt">Damit Werner über Signal schreiben kann, verbinden Sie einmal Ihr Signal mit Werner.</div><button type="button" class="btn blue" data-act="sg-qr">Signal verbinden</button></div>`;
+    if (s.connected) return `<div class="box ok"><div class="t-m">Signal ist verbunden</div><div class="txt">Werner schreibt Ihren Vertrauenspersonen über Ihr Signal. Sie antworten mit 1, 2 oder 3.</div></div>`;
+    const phone = this._isPhone();
+    const why = `<div class="txt">Werner schreibt dann <b>mit Ihrem Signal</b> an Ihre Vertrauenspersonen. Sie sehen Ihren Namen als Absender.</div>`;
+    if (this._ui.sgOther) {
+      const share = navigator.share ? `<button type="button" class="btn" data-act="sg-share">Link schicken …</button>` : '';
+      return `<div class="card" style="gap:12px"><div class="t-m">Code auf einem zweiten Gerät zeigen</div>
+<div class="txt">Mit dem Handy, auf dem Signal läuft, scannen Sie den Code. Der Code muss deshalb auf einem <b>anderen Bildschirm</b> stehen: Computer, Tablet oder das Handy eines Angehörigen.</div>
+<ol style="margin:0;padding-left:22px;font-size:16px;line-height:1.5"><li>Öffnen Sie auf dem anderen Gerät diesen Link und melden Sie sich an:</li></ol>
+<div style="font-size:17px;font-weight:700;word-break:break-all;background:${C.blueBg};color:${C.blueInk};border-radius:12px;padding:12px 14px">${esc(this._sgLink())}</div>
+<div class="grid2" style="gap:8px"><button type="button" class="btn" data-act="sg-copy">${this._ui.sgCopied ? '✓ Kopiert' : 'Link kopieren'}</button>${share || '<span></span>'}</div>
+<ol start="2" style="margin:0;padding-left:22px;font-size:16px;line-height:1.5"><li>Dort erscheint der Code. Oder Sie tippen dort auf Einstellen › Wer &amp; wie › Signal verbinden.</li><li>Auf diesem Handy in Signal: Ihr Bild › <b>Einstellungen</b> › <b>Verknüpfte Geräte</b> › <b>Gerät verknüpfen</b>. Dann den Code scannen.</li></ol>
+<div class="box info" style="padding:12px 14px"><div class="txt">Werner merkt von selbst, wenn es geklappt hat. Diese Seite zeigt dann „Signal ist verbunden“.</div></div>
+<button type="button" class="btn" data-act="sg-qr">Code doch hier zeigen</button></div>`;
+    }
+    if (!s.image) {
+      const here = `<button type="button" class="btn ${phone ? '' : 'blue'}" data-act="sg-qr">Code hier zeigen</button>`;
+      const other = `<button type="button" class="btn ${phone ? 'blue' : ''}" data-act="sg-other">Code auf anderem Gerät zeigen</button>`;
+      return `<div class="box warn" style="gap:10px"><div class="t-m">Signal ist noch nicht verbunden</div><div class="txt">Damit Werner über Signal schreiben kann, verbinden Sie einmal Ihr Signal mit Werner. Dafür scannen Sie mit Ihrem Handy einen Code.</div>${why}
+${phone ? '<div class="txt">Sie sind gerade am Handy. Den Code können Sie damit nicht selbst scannen – zeigen Sie ihn auf einem zweiten Gerät.</div>' + other + here : here + other}</div>`;
+    }
     return `<div class="card" style="gap:12px"><div class="t-m">Signal mit Werner verbinden</div>
-<div class="txt">Sie brauchen dafür <b>zwei Geräte</b>: diese Seite und Ihr Handy mit Signal zum Scannen.</div>
+<div class="txt">Scannen Sie diesen Code mit dem Handy, auf dem Ihr Signal läuft:</div>
 <ol style="margin:0;padding-left:22px;font-size:16px;line-height:1.5"><li>Öffnen Sie auf dem Handy die App <b>Signal</b>.</li><li>Tippen Sie auf Ihr Bild, dann auf <b>Einstellungen</b>.</li><li>Tippen Sie auf <b>Verknüpfte Geräte</b> und dann auf <b>Gerät verknüpfen</b>.</li><li>Halten Sie das Handy über diesen Code.</li></ol>
 <img src="${esc(s.image)}" alt="QR-Code zum Verbinden" style="width:240px;height:240px;align-self:center;image-rendering:pixelated;border:1px solid ${C.line};border-radius:12px">
-<div class="small">Der Code gilt nur wenige Minuten.</div>
+<div class="small">Der Code gilt nur wenige Minuten. Werner merkt von selbst, wenn es geklappt hat.</div>
+${phone ? '<div class="box warn" style="padding:12px 14px"><div class="txt">Ist das hier das Handy mit Signal? Dann geht es nicht – zeigen Sie den Code auf einem zweiten Gerät.</div><button type="button" class="btn" data-act="sg-other">Code auf anderem Gerät zeigen</button></div>' : ''}
 ${s.checked && !s.connected ? '<div class="box warn" style="padding:12px 14px"><div class="txt">Noch nicht verbunden. Haben Sie auf dem Handy „Gerät verknüpfen“ bestätigt? Warten Sie kurz und prüfen Sie noch einmal.</div></div>' : ''}
 <div class="grid2" style="gap:8px"><button type="button" class="btn" data-act="sg-qr" ${s.busy ? 'disabled' : ''}>Neuer Code</button><button type="button" class="btn green" data-act="sg-check" ${s.busy ? 'disabled' : ''}>${s.busy ? 'Wird geprüft …' : 'Ich habe gescannt'}</button></div></div>`;
   }
@@ -780,6 +870,7 @@ ${items.map((x) => `<div style="display:flex;flex-direction:column;gap:2px;borde
     if (d.tab) { this._ui.tab = d.tab; this._ui.sheet = null; this._keepScroll = false; this._render(true); return; }
     if (d.who) { this._who = d.who; this._log = null; this._logT = 0; this._tests = {}; this._ui.adding = null; this._render(true); this.hass = this._h; return; }
     if (d.sub) { this._ui.sub = d.sub; this._render(true); return; }
+    if (d.goto) { this._ui.tab = 'einstellen'; this._ui.sub = d.goto; this._ui.sheet = null; this._render(true); return; }
     if (d.day) { this._ui.day = Number(d.day); this._render(true); return; }
     if (d.way) { const [n, w] = d.way.split('|'); this._setWay(Number(n), w); return; }
     if (d.test) { this._test(Number(d.test)); return; }
@@ -824,6 +915,12 @@ ${items.map((x) => `<div style="display:flex;flex-direction:column;gap:2px;borde
       case 'energy-save': this._saveEnergy(); break;
       case 'sg-qr': this._loadSignal(true); break;
       case 'sg-check': this._loadSignal(false); break;
+      case 'sg-other': this._ui.sgOther = true; this._ui.sgCopied = false; if (this._sg) this._sg = Object.assign({}, this._sg, { image: null }); this._sgStartPoll(); this._render(true); break;
+      case 'sg-copy': {
+        const done = () => { this._ui.sgCopied = true; this._render(true); };
+        if (navigator.clipboard) navigator.clipboard.writeText(this._sgLink()).then(done).catch(() => {}); break;
+      }
+      case 'sg-share': navigator.share({ title: 'Werner: Signal verbinden', text: 'Bitte auf einem zweiten Gerät öffnen und den Code mit meinem Handy scannen:', url: this._sgLink() }).catch(() => {}); break;
       case 'add': { const free = this._people().find((p) => !p.name); if (free) { this._ui.adding = free.n; this._render(true); const inp = this.shadowRoot.querySelector(`input[data-text="person_${free.n}_name"]`); if (inp) inp.focus(); } break; }
       case 'add-me': {
         const hh = this._hh; const me = hh && hh.persons.find((p) => p.me);
@@ -837,7 +934,8 @@ ${items.map((x) => `<div style="display:flex;flex-direction:column;gap:2px;borde
       case 'add-res': {
         const person = this._val('add_person'); const name = this._val('add_name');
         if (!person || !name) { this._err = 'Bitte Person und Namen angeben.'; this._render(true); break; }
-        this._ws({ type: 'werner/resident/add', person, name, notify: this._val('add_notify') }).then((res) => { if (res) { this._ui.addRes = false; this._render(true); } });
+        const notify = this._val('add_notify'); const msg = { type: 'werner/resident/add', person, name }; if (notify !== '__auto') msg.notify = notify;
+        this._ws(msg).then((res) => { if (res) { this._ui.addRes = false; this._render(true); } });
         break;
       }
       case 'save-res': {

@@ -21,6 +21,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 
+from .geraete import describe, suggest_notify
 from .signal_messenger import SignalError, get_client
 
 from .const import (
@@ -145,6 +146,8 @@ def ws_household(hass: HomeAssistant, connection: websocket_api.ActiveConnection
             "has_login": bool(s.attributes.get("user_id")),
             "taken": s.entity_id in taken,
             "me": s.entity_id == me,
+            # Vorschlag fürs Handy: die HA-App, mit der sich diese Person anmeldet.
+            "phone": suggest_notify(hass, s.entity_id) if s.entity_id == me or user.is_admin else "",
         }
         for s in sorted(hass.states.async_all("person"), key=lambda s: s.name)
     ]
@@ -187,7 +190,8 @@ async def ws_add(hass: HomeAssistant, connection: websocket_api.ActiveConnection
             "Diese Person hat keine eigene Anmeldung. Das richtet ein Helfer ein.",
         )
         return
-    notify = _clean_notify(hass, msg.get("notify"))
+    # Ohne Angabe nimmt Werner das Handy, mit dem sich die Person in der HA-App anmeldet.
+    notify = _clean_notify(hass, msg["notify"] if "notify" in msg else suggest_notify(hass, person))
     if notify is None:
         connection.send_error(msg["id"], ERR_INVALID, "Dieses Handy gibt es nicht.")
         return
@@ -337,7 +341,7 @@ def ws_sources(hass: HomeAssistant, connection: websocket_api.ActiveConnection, 
         candidates.append(
             {
                 "entity_id": state.entity_id,
-                "name": state.name,
+                **describe(hass, state),
                 "group": group,
                 "state": state.state,
                 "unit": state.attributes.get("unit_of_measurement", ""),
@@ -350,7 +354,7 @@ def ws_sources(hass: HomeAssistant, connection: websocket_api.ActiveConnection, 
             candidates.append(
                 {
                     "entity_id": entity_id,
-                    "name": state.name if state else entity_id,
+                    **(describe(hass, state) if state else {"name": entity_id, "area": ""}),
                     "group": "andere",
                     "state": state.state if state else "unavailable",
                     "unit": state.attributes.get("unit_of_measurement", "") if state else "",
@@ -432,12 +436,16 @@ def ws_energy(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
         connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst sehen.")
         return
     all_states = hass.states.async_all(["weather", "sensor", "select", "input_select"])
+    described = {s.entity_id: describe(hass, s) for s in all_states}
     candidates = {
-        key: [
-            {"entity_id": s.entity_id, "name": s.name}
-            for s in sorted(all_states, key=lambda s: s.name.lower())
-            if _energy_fits(hass, key, s.entity_id)
-        ]
+        key: sorted(
+            (
+                {"entity_id": s.entity_id, **described[s.entity_id]}
+                for s in all_states
+                if _energy_fits(hass, key, s.entity_id)
+            ),
+            key=lambda c: (c["name"].lower(), c["area"].lower()),
+        )
         for key in ENERGY_ENTITY_KEYS
     }
     current = {key: entry.options.get(key, "") for key in ENERGY_ENTITY_KEYS}

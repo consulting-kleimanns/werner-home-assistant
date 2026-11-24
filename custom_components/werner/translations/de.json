@@ -2,24 +2,28 @@
   "config": {
     "step": {
       "user": {
-        "title": "Bewohner hinzufügen",
-        "description": "Werner wird für jeden Bewohner einmal eingerichtet. Jeder Bewohner braucht ein eigenes Konto in Home Assistant und die Home-Assistant-App auf seinem Handy.",
+        "title": "Werner einrichten",
+        "description": "Wählen Sie die Person, auf die Werner aufpassen soll. Name und Handy findet Werner selbst – Sie können beides hier ändern.\n\nDanach steht „Mein Zuhause“ in der Seitenleiste. Alles Weitere stellt der Bewohner dort selbst ein: wen Werner informiert, wann er nachfragt, Signal und weitere Bewohner.",
         "data": {
-          "name": "Name (so spricht Werner ihn an)",
-          "person": "Person in Home Assistant",
-          "notify_service": "Benachrichtigungsdienst des Handys"
+          "person": "Für wen?",
+          "name": "So spricht Werner die Person an",
+          "notify_service": "Handy der Person"
         },
         "data_description": {
-          "notify_service": "Zum Beispiel mobile_app_erikas_handy. Hier fragt Werner den Bewohner zuerst."
+          "name": "Leer lassen: Werner nimmt den Vornamen.",
+          "notify_service": "Leer lassen: Werner nimmt das Handy, mit dem sich die Person in der Home-Assistant-App anmeldet. Dort fragt Werner zuerst nach."
         }
       }
     },
     "error": {
       "name_missing": "Bitte einen Namen eintragen.",
-      "notify_not_found": "Diesen Benachrichtigungsdienst gibt es nicht. Bitte die Home-Assistant-App auf dem Handy des Bewohners prüfen."
+      "person_missing": "Diese Person gibt es nicht.",
+      "notify_not_found": "Dieses Handy kennt Home Assistant nicht. Ist die Home-Assistant-App auf dem Handy angemeldet?"
     },
     "abort": {
-      "already_configured": "Diese Person ist in Werner schon eingerichtet."
+      "already_configured": "Diese Person ist in Werner schon eingerichtet.",
+      "no_person": "Es gibt noch keine Person. Legen Sie sie unter Einstellungen › Personen an (mit „Darf sich anmelden“) und starten Sie danach noch einmal.",
+      "all_persons_configured": "Werner passt schon auf alle Personen auf. Weitere Bewohner legen Sie unter Einstellungen › Personen an."
     }
   },
   "options": {
