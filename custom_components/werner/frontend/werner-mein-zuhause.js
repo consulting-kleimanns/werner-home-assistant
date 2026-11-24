@@ -11,7 +11,7 @@
  * können zwischen den Bewohnern umschalten. Alle Werte kommen aus den Entitäten
  * der Integration; was nicht eingerichtet ist, wird ausgeblendet oder zeigt „–“.
  */
-const WERNER_UI_VERSION = '0.6.0';
+const WERNER_UI_VERSION = '0.7.0';
 
 const C = {
   bg: '#F5F2EA', ink: '#1E2421', muted: '#55605A', line: '#E2DDD1', blue: '#1F4E79', blueBg: '#E6EEF6', blueInk: '#12324F',
@@ -175,7 +175,15 @@ class WernerMeinZuhause extends HTMLElement {
   }
 
   /* ---------- Home Assistant ---------- */
-  setConfig(config) { this._config = config || {}; }
+  // Als Karte einstellbar:
+  //   type: custom:werner-mein-zuhause
+  //   screen: werner        # Start-Bildschirm: start, werner, energie, auto, einstellen
+  //   resident: person.erika # nur für Helfer: diesen Bewohner zeigen
+  //   hide_tabs: true        # Reiterleiste ausblenden (z. B. für ein Tablet an der Wand)
+  setConfig(config) {
+    this._config = config || {};
+    if (['start', 'werner', 'energie', 'auto', 'einstellen'].includes(this._config.screen)) this._ui.tab = this._config.screen;
+  }
   getCardSize() { return 12; }
   getGridOptions() { return { columns: 'full' }; }
   static getStubConfig() { return {}; }
@@ -216,6 +224,7 @@ class WernerMeinZuhause extends HTMLElement {
     const mine = this._mine();
     if (!(this._h.user && this._h.user.is_admin)) return mine;
     const rs = this._residents();
+    if (!this._who && this._config && this._config.resident) { const f = rs.find((r) => r.attributes.person === this._config.resident); if (f) return f; }
     if (this._who) { const f = rs.find((r) => r.entity_id === this._who); if (f) return f; }
     return mine || rs[0] || null;
   }
@@ -308,7 +317,7 @@ class WernerMeinZuhause extends HTMLElement {
     const tick = this._ui.tab === 'einstellen' && this._ui.sub === 'sensoren' ? Math.floor(Date.now() / 10000) : '';
     const sig = (r ? r.state + JSON.stringify(r.attributes) : '') + ids.concat(en).map((i) => this._h.states[i] && this._h.states[i].state).join('|')
       + (r && this._h.states[r.attributes.person] ? this._h.states[r.attributes.person].state : '')
-      + JSON.stringify(this._ui) + JSON.stringify(this._tests) + JSON.stringify(this._hh || null) + JSON.stringify(this._src || null) + JSON.stringify(this._en || null) + JSON.stringify(this._sg || null) + (this._busy ? 'B' : '') + (this._err || '') + (this._log ? this._log.length : -1) + (this._fc ? this._fc.length : 0) + (this._who || '') + tick;
+      + JSON.stringify(this._ui) + JSON.stringify(this._tests) + JSON.stringify(this._hh || null) + JSON.stringify(this._src || null) + JSON.stringify(this._en || null) + JSON.stringify(this._sg || null) + JSON.stringify(this._mail || null) + (this._busy ? 'B' : '') + (this._err || '') + (this._log ? this._log.length : -1) + (this._fc ? this._fc.length : 0) + (this._who || '') + tick;
     if (!force && sig === this._sig) return;
     this._sig = sig;
 
@@ -325,7 +334,7 @@ class WernerMeinZuhause extends HTMLElement {
       body = fn.call(this);
     }
     const top = this._topBar();
-    const nav = tabs.length ? `<nav aria-label="Reiter"><div class="wrapnav" style="grid-template-columns:repeat(${tabs.length},minmax(0,1fr))">${tabs.map((t) => `<button type="button" data-tab="${t[0]}" class="${this._ui.tab === t[0] ? 'on' : ''}" ${this._ui.tab === t[0] ? 'aria-current="page"' : ''}>${svg(t[0])}<span>${t[1]}</span></button>`).join('')}</div></nav>` : '';
+    const nav = tabs.length && !(this._config && this._config.hide_tabs) ? `<nav aria-label="Reiter"><div class="wrapnav" style="grid-template-columns:repeat(${tabs.length},minmax(0,1fr))">${tabs.map((t) => `<button type="button" data-tab="${t[0]}" class="${this._ui.tab === t[0] ? 'on' : ''}" ${this._ui.tab === t[0] ? 'aria-current="page"' : ''}>${svg(t[0])}<span>${t[1]}</span></button>`).join('')}</div></nav>` : '';
     let sheet = '';
     if (this._ui.sheet === 'remove_me') sheet = this._sheetRemoveMe();
     else if (r && r.attributes.consent !== false) {
@@ -379,6 +388,10 @@ class WernerMeinZuhause extends HTMLElement {
     if (people.some((p) => p.way === 'signal')) {
       if (!this._sg && !this._sgQuietT) { this._sgQuietT = Date.now(); this._h.callWS({ type: 'werner/signal/status' }).then((st) => { if (!this._sg) { this._sg = st; this._render(true); } }).catch(() => {}); }
       items.push({ ok: !!(this._sg && this._sg.connected), sub: 'wer', done: 'Signal ist verbunden', todo: 'Signal mit Werner verbinden' });
+    }
+    if (people.some((p) => p.way === 'e_mail')) {
+      if (!this._mail && !this._mailQuietT) { this._mailQuietT = Date.now(); this._loadMail(); }
+      items.push({ ok: !!(this._mail && this._mail.configured), sub: 'wer', done: 'E-Mail-Versand ist eingerichtet', todo: 'E-Mail-Versand einrichten (macht ein Helfer)' });
     }
     return { items, open: items.filter((i) => !i.ok).length };
   }
@@ -498,7 +511,7 @@ ${this._setupCard(false)}<div class="sub" role="tablist" aria-label="Bereiche">$
       if (editingName) fields += `<label class="f">Name der Person<input type="text" data-text="person_${p.n}_name" placeholder="z. B. Sabine (Tochter)" autocomplete="off"></label>`;
       if (p.way === 'ha_app') fields += `<label class="f">Handy mit der Home-Assistant-App<select data-text="person_${p.n}_contact"><option value="">– bitte wählen –</option>${notify.map((s) => `<option value="${esc(s)}" ${p.contact === s ? 'selected' : ''}>${esc(s.replace('mobile_app_', '').replace(/_/g, ' '))}</option>`).join('')}${p.contact && !notify.includes(p.contact) ? `<option value="${esc(p.contact)}" selected>${esc(p.contact)} (nicht gefunden)</option>` : ''}</select></label>`;
       if (p.way === 'signal') fields += `<label class="f">Handynummer für Signal<input type="tel" data-text="person_${p.n}_phone" value="${esc(p.phone)}" placeholder="+49 170 0000000"></label><div class="small">Die Person antwortet bei einem Alarm einfach mit 1, 2 oder 3.</div>`;
-      if (p.way === 'e_mail') fields += `<label class="f">E-Mail-Adresse<input type="email" data-text="person_${p.n}_e_mail" value="${esc(p.mail)}" placeholder="name@example.org"></label><div class="small">E-Mail kommt in einer der nächsten Versionen. Bis dahin überspringt Werner diese Person.</div>`;
+      if (p.way === 'e_mail') fields += `<label class="f">E-Mail-Adresse<input type="email" data-text="person_${p.n}_e_mail" value="${esc(p.mail)}" placeholder="name@example.org"></label><div class="small">Die Person antwortet mit einem Klick in der E-Mail. Sie braucht dafür nichts zu installieren.</div>`;
       return `<div class="card" style="padding:14px"><div class="row"><span class="nr">${i + 1}</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:19px;font-weight:700">${esc(p.name || 'Neue Person')}</span><span class="small">${esc(summary || 'Noch kein Weg gewählt')}</span></span></div>
 <div class="small">So erreicht Werner diese Person:</div>
 <div class="chips">${WAYS.map((w) => `<button type="button" class="ch ${p.way === w[0] ? 'on' : ''}" aria-pressed="${p.way === w[0]}" data-way="${p.n}|${w[0]}">${p.way === w[0] ? '✓ ' : ''}${w[1]}</button>`).join('')}<button type="button" class="ch ${p.way === 'off' ? 'on' : ''}" aria-pressed="${p.way === 'off'}" data-way="${p.n}|off">Nicht melden</button></div>
@@ -511,7 +524,8 @@ ${t && t !== 'busy' ? `<div class="box ${t.ok ? 'ok' : 'err'}" style="padding:10
     }).join('');
     const free = people.find((p) => !p.name && this._ui.adding !== p.n);
     const sig = (people.some((p) => p.name && p.way === 'signal') || this._sgAuto || (this._sg && (this._sg.image || this._ui.sgOther))) ? this._signalCard() : '';
-    return `${sig}<div class="txt">Zuerst fragt Werner <b>immer Sie selbst</b> – auf Ihrem Handy. Antworten Sie nicht, informiert er nacheinander:</div>
+    const mailCard = people.some((p) => p.name && p.way === 'e_mail') ? this._mailCard() : '';
+    return `${sig}${mailCard}<div class="txt">Zuerst fragt Werner <b>immer Sie selbst</b> – auf Ihrem Handy. Antworten Sie nicht, informiert er nacheinander:</div>
 ${cards}
 ${!filled.length ? `<div class="box warn"><div class="txt">Niemand eingetragen: Werner fragt nur Sie selbst und informiert sonst niemanden.</div></div>` : ''}
 ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" data-act="add">+ Person hinzufügen</button>` : ''}
@@ -805,6 +819,59 @@ ${phone ? '<div class="box warn" style="padding:12px 14px"><div class="txt">Ist 
 ${s.checked && !s.connected ? '<div class="box warn" style="padding:12px 14px"><div class="txt">Noch nicht verbunden. Haben Sie auf dem Handy „Gerät verknüpfen“ bestätigt? Warten Sie kurz und prüfen Sie noch einmal.</div></div>' : ''}
 <div class="grid2" style="gap:8px"><button type="button" class="btn" data-act="sg-qr" ${s.busy ? 'disabled' : ''}>Neuer Code</button><button type="button" class="btn green" data-act="sg-check" ${s.busy ? 'disabled' : ''}>${s.busy ? 'Wird geprüft …' : 'Ich habe gescannt'}</button></div></div>`;
   }
+  /* ---------- E-Mail-Versand (für den ganzen Haushalt, richtet ein Helfer ein) ---------- */
+  async _loadMail() {
+    try { this._mail = await this._h.callWS({ type: 'werner/mail/status' }); } catch (err) { this._mail = { error: err.message || String(err) }; }
+    this._render(true);
+  }
+  _mailCard() {
+    const m = this._mail;
+    if (!m) { this._mail = { loading: true }; setTimeout(() => this._loadMail()); return '<div class="muted">E-Mail wird geprüft …</div>'; }
+    if (m.loading) return '<div class="muted">E-Mail wird geprüft …</div>';
+    if (m.error) return `<div class="box err"><div class="txt">${esc(m.error)}</div></div>`;
+    if (!m.may_edit) {
+      return m.configured
+        ? `<div class="box ok"><div class="t-m">E-Mail ist eingerichtet</div><div class="txt">Werner schreibt Ihren Vertrauenspersonen auch per E-Mail.</div></div>`
+        : `<div class="box warn"><div class="t-m">E-Mail ist noch nicht eingerichtet</div><div class="txt">Dafür braucht Werner ein eigenes E-Mail-Postfach. Das richtet einmal ein Helfer ein. Bis dahin überspringt Werner Personen mit E-Mail.</div></div>`;
+    }
+    if (m.configured && !this._ui.mailEdit) {
+      return `<div class="box ok" style="gap:10px"><div class="t-m">E-Mail ist eingerichtet</div><div class="txt">Werner sendet von ${esc(m.user)}.</div>${this._mailTestBlock()}<button type="button" class="btn" data-act="mail-edit">Postfach ändern</button></div>`;
+    }
+    const presets = [['GMX', 'mail.gmx.net', 587, 'starttls'], ['WEB.DE', 'smtp.web.de', 587, 'starttls'], ['Gmail', 'smtp.gmail.com', 587, 'starttls'], ['T-Online', 'securesmtp.t-online.de', 465, 'ssl'], ['Outlook', 'smtp-mail.outlook.com', 587, 'starttls']];
+    const f = this._ui.mailForm || { server: m.server, port: m.port || 587, security: m.security || 'starttls' };
+    return `<section class="card" aria-label="E-Mail-Versand"><div class="t-m">E-Mail-Versand einrichten</div>
+<div class="txt">Werner braucht ein <b>eigenes Postfach</b>, z. B. bei GMX oder WEB.DE. Nehmen Sie nicht Ihr privates Postfach. Das gilt für den ganzen Haushalt.</div>
+<div class="chips">${presets.map((x) => `<button type="button" class="ch ${f.server === x[1] ? 'on' : ''}" data-mail-preset="${x[1]}|${x[2]}|${x[3]}">${f.server === x[1] ? '✓ ' : ''}${x[0]}</button>`).join('')}</div>
+<label class="f">Postausgangs-Server (SMTP)<input type="text" data-f="mail_server" value="${esc(f.server || '')}" placeholder="mail.gmx.net" autocomplete="off"></label>
+<div class="grid2" style="gap:8px"><label class="f">Port<input type="number" data-f="mail_port" value="${esc(f.port || 587)}"></label>
+<label class="f">Verschlüsselung<select data-f="mail_security"><option value="starttls" ${f.security !== 'ssl' ? 'selected' : ''}>STARTTLS</option><option value="ssl" ${f.security === 'ssl' ? 'selected' : ''}>SSL/TLS</option></select></label></div>
+<label class="f">E-Mail-Adresse des Postfachs<input type="email" data-f="mail_user" value="${esc(m.user || '')}" placeholder="werner@example.org" autocomplete="off"></label>
+<label class="f">Passwort<input type="password" data-f="mail_password" value="" placeholder="${m.has_password ? 'unverändert lassen' : ''}" autocomplete="new-password"></label>
+<label class="f">Absendername<input type="text" data-f="mail_sender" value="${esc(m.sender_name || 'Werner')}" maxlength="60"></label>
+<div class="small">Bei GMX und WEB.DE in den Postfach-Einstellungen „POP3/IMAP/SMTP“ erlauben. Bei Gmail ein App-Passwort verwenden. Das Passwort sieht in „Mein Zuhause“ niemand.</div>
+${this._errBox()}<button type="button" class="btn blue" data-act="mail-save" ${this._busy ? 'disabled' : ''}>Speichern</button>${m.configured ? '<button type="button" class="btn" data-act="mail-cancel">Abbrechen</button>' : ''}</section>`;
+  }
+  _mailTestBlock() {
+    const to = (this._people().find((p) => p.way === 'e_mail' && p.mail.includes('@')) || {}).mail || '';
+    const t = this._ui.mailTest;
+    return `<div class="row" style="gap:8px;align-items:flex-end"><label class="f" style="flex-grow:1">Test-E-Mail an<input type="email" data-f="mail_to" value="${esc(to)}"></label><button type="button" class="btn" data-act="mail-test" ${t === 'busy' ? 'disabled' : ''}>${t === 'busy' ? '…' : 'Senden'}</button></div>${t && t !== 'busy' ? `<div class="box ${t.ok ? 'ok' : 'err'}" style="padding:10px 12px"><div class="txt">${esc(t.text)}</div></div>` : ''}`;
+  }
+  async _saveMail() {
+    const pw = (this.shadowRoot.querySelector('[data-f="mail_password"]') || {}).value || '';
+    const msg = { type: 'werner/mail/set', server: this._val('mail_server'), port: Number(this._val('mail_port')) || 587, security: this._val('mail_security') || 'starttls', user: this._val('mail_user'), password: pw, sender_name: this._val('mail_sender') || 'Werner' };
+    if (!msg.server || !msg.user.includes('@')) { this._err = 'Bitte Server und E-Mail-Adresse des Postfachs eintragen.'; this._render(true); return; }
+    if (!pw && !(this._mail && this._mail.has_password)) { this._err = 'Bitte das Passwort eintragen.'; this._render(true); return; }
+    this._busy = true; this._err = null; this._render(true);
+    try { this._mail = Object.assign(await this._h.callWS(msg), { may_edit: true }); this._ui.mailEdit = false; this._ui.mailForm = null; }
+    catch (err) { this._err = err.message || String(err); }
+    this._busy = false; this._render(true);
+  }
+  async _testMail() {
+    const to = this._val('mail_to'); if (!to.includes('@')) { this._ui.mailTest = { ok: false, text: 'Bitte eine E-Mail-Adresse eintragen.' }; this._render(true); return; }
+    this._ui.mailTest = 'busy'; this._render(true);
+    try { this._ui.mailTest = await this._h.callWS({ type: 'werner/mail/test', to }); } catch (err) { this._ui.mailTest = { ok: false, text: err.message || String(err) }; }
+    this._render(true);
+  }
   _sheetData() {
     const people = this._people().filter((p) => p.name);
     const rules = [['rule_morning', 'Morgens nichts los'], ['rule_quiet', 'Tagsüber lange still'], ['rule_night', 'Nachts ungewöhnlich aktiv']].filter((x) => this._on(x[0])).map((x) => x[1]);
@@ -870,6 +937,7 @@ ${items.map((x) => `<div style="display:flex;flex-direction:column;gap:2px;borde
     if (d.tab) { this._ui.tab = d.tab; this._ui.sheet = null; this._keepScroll = false; this._render(true); return; }
     if (d.who) { this._who = d.who; this._log = null; this._logT = 0; this._tests = {}; this._ui.adding = null; this._render(true); this.hass = this._h; return; }
     if (d.sub) { this._ui.sub = d.sub; this._render(true); return; }
+    if (d.mailPreset) { const [server, port, security] = d.mailPreset.split('|'); this._ui.mailForm = { server, port: Number(port), security }; this._render(true); return; }
     if (d.goto) { this._ui.tab = 'einstellen'; this._ui.sub = d.goto; this._ui.sheet = null; this._render(true); return; }
     if (d.day) { this._ui.day = Number(d.day); this._render(true); return; }
     if (d.way) { const [n, w] = d.way.split('|'); this._setWay(Number(n), w); return; }
@@ -915,6 +983,10 @@ ${items.map((x) => `<div style="display:flex;flex-direction:column;gap:2px;borde
       case 'energy-save': this._saveEnergy(); break;
       case 'sg-qr': this._loadSignal(true); break;
       case 'sg-check': this._loadSignal(false); break;
+      case 'mail-edit': this._ui.mailEdit = true; this._err = null; this._render(true); break;
+      case 'mail-cancel': this._ui.mailEdit = false; this._ui.mailForm = null; this._err = null; this._render(true); break;
+      case 'mail-save': this._saveMail(); break;
+      case 'mail-test': this._testMail(); break;
       case 'sg-other': this._ui.sgOther = true; this._ui.sgCopied = false; if (this._sg) this._sg = Object.assign({}, this._sg, { image: null }); this._sgStartPoll(); this._render(true); break;
       case 'sg-copy': {
         const done = () => { this._ui.sgCopied = true; this._render(true); };

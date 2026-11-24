@@ -128,9 +128,11 @@ Aktivität im Haushalt beruhigt Werner nie für einen einzelnen Bewohner: Ist nu
 |---|---|---|
 | Home-Assistant-App | kostenlos | ja: 1 kümmere mich, 2 Fehlalarm, 3 nächste Person |
 | Signal | kostenlos | ja: Antwort 1, 2 oder 3 |
-| E-Mail | kostenlos (eigenes Postfach für Werner) | nein – in der Integration noch in Arbeit |
+| E-Mail | kostenlos (eigenes Postfach für Werner) | ja: per Klick in der E-Mail, wenn Home Assistant von außen erreichbar ist |
 
-E-Mail gibt es heute nur im YAML-Paket. Dafür ein eigenes Postfach nur für Werner anlegen, z. B. bei GMX oder WEB.DE, und dort den SMTP-Zugriff erlauben. Bei Gmail ein App-Passwort verwenden.
+**E-Mail einrichten (nur Helfer):** Ein eigenes Postfach nur für Werner anlegen, z. B. bei GMX oder WEB.DE, und dort den SMTP-Zugriff erlauben. Bei Gmail ein App-Passwort verwenden. Sobald eine Vertrauensperson den Weg E-Mail hat, erscheint unter Einstellen › Wer & wie der Kasten **„E-Mail-Versand einrichten“** – nur für Administratoren. Anbieter wählen, Adresse und Passwort eintragen, speichern, Test-E-Mail senden. Das Postfach gilt für den ganzen Haushalt. Das Passwort liegt im Speicher von Home Assistant, nicht in einer Entität, und erscheint nirgends in der Oberfläche.
+
+Die Antwort-Knöpfe in der E-Mail funktionieren, wenn Home Assistant von außen erreichbar ist (Einstellungen › System › Netzwerk › Home-Assistant-URL „Internet“, z. B. über Nabu Casa oder eine eigene Domain). Ohne diese Adresse kommt die E-Mail ohne Knöpfe; Werner wartet dann die Frist ab und informiert die nächste Person. Erst der Knopf auf der geöffneten Seite zählt – Virenscanner, die Links vorab öffnen, lösen keine Antwort aus.
 
 ### Warum nicht WhatsApp oder Threema?
 
