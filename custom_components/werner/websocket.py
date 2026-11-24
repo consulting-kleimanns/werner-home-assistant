@@ -28,8 +28,11 @@ from .const import (
     CONF_NAME,
     CONF_NOTIFY,
     CONF_PERSON,
+    CONF_PV_KWP,
     CONF_SOURCES,
+    CONF_VEHICLE_NAME,
     DEFAULT_BASELOAD,
+    ENERGY_ENTITY_KEYS,
     DOMAIN,
     SOURCE_UI,
 )
@@ -48,6 +51,8 @@ def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_remove)
     websocket_api.async_register_command(hass, ws_sources)
     websocket_api.async_register_command(hass, ws_set_sources)
+    websocket_api.async_register_command(hass, ws_energy)
+    websocket_api.async_register_command(hass, ws_set_energy)
 
 
 # ------------------------------------------------------------------ Hilfen
@@ -389,3 +394,87 @@ def ws_set_sources(hass: HomeAssistant, connection: websocket_api.ActiveConnecti
         options[CONF_BASELOAD] = msg["baseload_w"]
     hass.config_entries.async_update_entry(entry, options=options)
     connection.send_result(msg["id"], {"chosen": sources})
+
+
+# ------------------------------------------------------- Energie-Anzeige
+
+
+def _energy_fits(hass: HomeAssistant, key: str, entity_id: str) -> bool:
+    """Passt die Entität zu diesem Feld der Energie-Anzeige?"""
+    state = hass.states.get(entity_id)
+    if state is None or _own_entity(hass, entity_id):
+        return False
+    domain = entity_id.split(".", 1)[0]
+    dc = state.attributes.get("device_class")
+    return {
+        "weather": domain == "weather",
+        "grid_power": domain == "sensor" and dc == "power",
+        "pv_power": domain == "sensor" and dc == "power",
+        "grid_energy": domain == "sensor" and dc == "energy",
+        "battery_soc": domain == "sensor" and dc == "battery",
+        "vehicle_soc": domain == "sensor" and dc == "battery",
+        "charge_mode": domain in ("select", "input_select"),
+    }.get(key, False)
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): "werner/energy", vol.Required("entry_id"): str}
+)
+@callback
+def ws_energy(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Was die Energie-Anzeige zeigen könnte – und was gewählt ist."""
+    entry = _entry(hass, msg["entry_id"])
+    if entry is None or not (connection.user.is_admin or _is_own(hass, entry, connection.user.id)):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst sehen.")
+        return
+    all_states = hass.states.async_all(["weather", "sensor", "select", "input_select"])
+    candidates = {
+        key: [
+            {"entity_id": s.entity_id, "name": s.name}
+            for s in sorted(all_states, key=lambda s: s.name.lower())
+            if _energy_fits(hass, key, s.entity_id)
+        ]
+        for key in ENERGY_ENTITY_KEYS
+    }
+    current = {key: entry.options.get(key, "") for key in ENERGY_ENTITY_KEYS}
+    current[CONF_PV_KWP] = entry.options.get(CONF_PV_KWP, 0)
+    current[CONF_VEHICLE_NAME] = entry.options.get(CONF_VEHICLE_NAME, "")
+    connection.send_result(msg["id"], {"current": current, "candidates": candidates})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "werner/resident/energy",
+        vol.Required("entry_id"): str,
+        vol.Required("values"): {
+            vol.Optional(k): str for k in (*ENERGY_ENTITY_KEYS, CONF_VEHICLE_NAME)
+        }
+        | {vol.Optional(CONF_PV_KWP): vol.All(vol.Coerce(float), vol.Range(min=0, max=100))},
+    }
+)
+@callback
+def ws_set_energy(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Der Bewohner wählt selbst, was die Energie-Anzeige zeigt. Leer heißt: nicht zeigen."""
+    entry = _entry(hass, msg["entry_id"])
+    if entry is None or not (connection.user.is_admin or _is_own(hass, entry, connection.user.id)):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst ändern.")
+        return
+    options = dict(entry.options)
+    for key, value in msg["values"].items():
+        if key in ENERGY_ENTITY_KEYS:
+            value = value.strip()
+            if value and value != entry.options.get(key) and not (
+                connection.user.is_admin or _energy_fits(hass, key, value)
+            ):
+                connection.send_error(msg["id"], ERR_INVALID, f"{value} passt hier nicht.")
+                return
+            if value:
+                options[key] = value
+            else:
+                options.pop(key, None)
+        elif key == CONF_VEHICLE_NAME:
+            options[key] = value.strip()[:40]
+        else:
+            options[key] = value
+    hass.config_entries.async_update_entry(entry, options=options)
+    connection.send_result(msg["id"], {})

@@ -171,3 +171,37 @@ async def test_quellen_selbst_waehlen(hass: HomeAssistant, hass_admin_user, hass
     other = await hass_ws_client(hass)  # Admin: darf als Helfer
     await other.send_json_auto_id({"type": "werner/sources", "entry_id": entry.entry_id})
     assert (await other.receive_json())["success"]
+
+
+async def test_energie_anzeige_selbst_waehlen(hass: HomeAssistant, hass_read_only_user, hass_read_only_access_token, hass_ws_client, notify_erika) -> None:
+    await _haushalt(hass, hass_read_only_user.id)
+    hass.states.async_set("weather.zuhause", "sunny", {})
+    hass.states.async_set("sensor.netz", "300", {"device_class": "power", "unit_of_measurement": "W"})
+    hass.states.async_set("sensor.zaehler", "1234", {"device_class": "energy", "unit_of_measurement": "kWh"})
+    ws = await hass_ws_client(hass, hass_read_only_access_token)
+    await ws.send_json_auto_id({"type": "werner/resident/add", "person": PERSON, "name": "Erika"})
+    assert (await ws.receive_json())["success"]
+    await run(hass)
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+
+    await ws.send_json_auto_id({"type": "werner/energy", "entry_id": entry.entry_id})
+    res = (await ws.receive_json())["result"]
+    assert {c["entity_id"] for c in res["candidates"]["weather"]} == {"weather.zuhause"}
+    assert "sensor.zaehler" in {c["entity_id"] for c in res["candidates"]["grid_energy"]}
+    assert "sensor.zaehler" not in {c["entity_id"] for c in res["candidates"]["grid_power"]}
+
+    await ws.send_json_auto_id({"type": "werner/resident/energy", "entry_id": entry.entry_id,
+                                "values": {"weather": "weather.zuhause", "grid_power": "sensor.netz", "pv_kwp": 1.5}})
+    assert (await ws.receive_json())["success"]
+    await run(hass)
+    assert entry.options["grid_power"] == "sensor.netz" and entry.options["pv_kwp"] == 1.5
+
+    # Unpassend: ein Energiezähler als Leistung
+    await ws.send_json_auto_id({"type": "werner/resident/energy", "entry_id": entry.entry_id, "values": {"grid_power": "sensor.zaehler"}})
+    assert not (await ws.receive_json())["success"]
+
+    # Leer blendet aus
+    await ws.send_json_auto_id({"type": "werner/resident/energy", "entry_id": entry.entry_id, "values": {"grid_power": ""}})
+    assert (await ws.receive_json())["success"]
+    await run(hass)
+    assert "grid_power" not in entry.options

@@ -280,7 +280,7 @@ class WernerMeinZuhause extends HTMLElement {
     const en = r ? Object.values(this._energy()).filter((v) => typeof v === 'string' && v.includes('.')) : [];
     const sig = (r ? r.state + JSON.stringify(r.attributes) : '') + ids.concat(en).map((i) => this._h.states[i] && this._h.states[i].state).join('|')
       + (r && this._h.states[r.attributes.person] ? this._h.states[r.attributes.person].state : '')
-      + JSON.stringify(this._ui) + JSON.stringify(this._tests) + JSON.stringify(this._hh || null) + JSON.stringify(this._src || null) + (this._busy ? 'B' : '') + (this._err || '') + (this._log ? this._log.length : -1) + (this._fc ? this._fc.length : 0) + (this._who || '');
+      + JSON.stringify(this._ui) + JSON.stringify(this._tests) + JSON.stringify(this._hh || null) + JSON.stringify(this._src || null) + JSON.stringify(this._en || null) + (this._busy ? 'B' : '') + (this._err || '') + (this._log ? this._log.length : -1) + (this._fc ? this._fc.length : 0) + (this._who || '');
     if (!force && sig === this._sig) return;
     this._sig = sig;
 
@@ -305,6 +305,7 @@ class WernerMeinZuhause extends HTMLElement {
       else if (this._ui.sheet === 'hilfe') sheet = this._sheetHilfe();
       else if (this._ui.sheet === 'info') sheet = this._sheetInfo();
       else if (this._ui.sheet === 'data') sheet = this._sheetData();
+      else if (this._ui.sheet === 'energy') sheet = this._sheetEnergy();
       else if (this._ui.sheet && this._ui.sheet.startsWith('consent_')) sheet = this._sheetConsent(this._ui.sheet);
     }
     const scroll = this.shadowRoot.querySelector('main');
@@ -396,13 +397,14 @@ ${this._log === null ? '<div class="muted">Wird geladen …</div>' : log.length 
     const devices = [['Waschmaschine', 'ca. 1 kWh je Wäsche'], ['Spülmaschine', 'ca. 1 kWh']];
     if (this._hasCar()) devices.unshift([e.vehicle_name || 'Auto', 'lädt nach Ihrem Lademodus', true]);
     return `<h1>Energie heute</h1>${kwp ? `<div class="muted">Solaranlage mit ${fmtNum(kwp, 'kWp', 1)}.</div>` : ''}
-${minis.length ? `<div class="grid2">${minis.join('')}</div>` : `<div class="box grey"><div class="txt">Ihr Helfer kann hier Stromzähler, Solaranlage und Batterie anzeigen lassen.</div></div>`}
+${minis.length ? `<div class="grid2">${minis.join('')}</div>` : `<div class="box grey"><div class="txt">Hier können Sie Stromzähler, Solaranlage, Batterie und Auto anzeigen lassen.</div></div>`}
 <section aria-label="Die nächsten Tage" style="display:flex;flex-direction:column;gap:10px"><div class="t-l">Die nächsten Tage</div>
 ${days.length ? `<div class="days">${days.map((d) => `<button type="button" class="day ${d.good ? 'good' : ''} ${sel && d.i === sel.i ? 'sel' : ''}" data-day="${d.i}" aria-pressed="${sel && d.i === sel.i}"><span style="font-size:16px;font-weight:700">${esc(d.name)}</span><span style="font-size:14px">${esc(d.weather)}</span><span style="font-size:20px;font-weight:700">${d.kwh != null ? fmtNum(d.kwh, 'kWh', 1) : (d.t != null ? fmtNum(d.t, '°C') : '')}</span>${d.kwh != null ? '<span style="font-size:13px">Sonnenstrom</span>' : ''}</button>`).join('')}</div>` : '<div class="muted">Keine Wettervorhersage gefunden.</div>'}
 ${tip ? `<div class="box ${tip.cls || 'grey'}" style="border-radius:16px;padding:14px 16px"><div class="t-m">${esc(tip.title)}</div><div class="txt">${esc(tip.text)}</div></div>` : ''}</section>
 <section aria-label="Meine Geräte" style="display:flex;flex-direction:column;gap:10px"><div class="t-l">Meine Geräte</div>
 ${devices.map((g) => `<div class="card" style="padding:14px;gap:6px"><div class="between" style="align-items:baseline"><span class="t-m">${esc(g[0])}</span><span class="small">${esc(g[1])}</span></div><div class="txt"><b>Beste Zeit:</b> ${esc(bestTime)}</div><span class="badge ${g[2] ? 'info' : 'grey'}">${g[2] ? 'Steuert evcc automatisch' : 'Tipp – Sie schalten selbst ein'}</span></div>`).join('')}
-</section><div class="small">Sonnenstrom ist eine grobe Schätzung aus der Wettervorhersage.</div>`;
+</section><div class="small">Sonnenstrom ist eine grobe Schätzung aus der Wettervorhersage.</div>
+<button type="button" class="btn" style="min-height:52px;color:${C.blue}" data-act="energy">Was hier angezeigt wird – ändern</button>`;
   }
 
   /* ---------- Auto ---------- */
@@ -656,6 +658,36 @@ ${li('Sie bestimmen alles selbst: <b>wer</b>, <b>wie</b> und <b>wann</b>. Das st
 <button type="button" class="btn" style="min-height:60px;font-size:18px" data-act="close">Nein, lieber nicht</button>
 <button type="button" class="btn green" style="min-height:64px;font-size:20px" data-consent-yes="${key}">Ja, einschalten</button>`);
   }
+  async _loadEnergy() {
+    this._en = null; this._render(true);
+    try { this._en = await this._h.callWS({ type: 'werner/energy', entry_id: this._r.attributes.entry_id }); } catch (err) { this._en = { error: err.message || String(err) }; }
+    this._render(true);
+  }
+  _sheetEnergy() {
+    const e = this._en;
+    let inner = `<div style="font-size:26px;font-weight:700;line-height:1.2">Was die Energie-Anzeige zeigt</div><div class="small">Sie wählen selbst. „– nicht zeigen –“ blendet ein Feld aus.</div>`;
+    if (!e) inner += '<div class="muted">Wird geladen …</div>';
+    else if (e.error) inner += `<div class="box err"><div class="txt">${esc(e.error)}</div></div>`;
+    else {
+      const sel = (key, label) => { const opts = e.candidates[key] || []; const cur = e.current[key] || ''; return `<label class="f">${label}<select data-f="en_${key}"><option value="">– nicht zeigen –</option>${opts.map((o) => `<option value="${esc(o.entity_id)}" ${cur === o.entity_id ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}${cur && !opts.some((o) => o.entity_id === cur) ? `<option value="${esc(cur)}" selected>${esc(cur)}</option>` : ''}</select></label>`; };
+      inner += sel('weather', 'Wettervorhersage') + sel('grid_power', 'Strom aus dem Netz (gerade)') + sel('grid_energy', 'Zählerstand') + sel('pv_power', 'Sonnenstrom (gerade)')
+        + `<label class="f">Größe der Solaranlage in kWp (für die Sonnen-Schätzung)<input type="number" inputmode="decimal" step="0.1" min="0" data-f="en_pv_kwp" value="${esc(e.current.pv_kwp || '')}" placeholder="z. B. 1,5"></label>`
+        + sel('battery_soc', 'Batterie (Ladestand)')
+        + `<label class="f">Name des Autos<input type="text" maxlength="40" data-f="en_vehicle_name" value="${esc(e.current.vehicle_name || '')}" placeholder="z. B. Mein Auto"></label>`
+        + sel('vehicle_soc', 'Auto-Akku (Ladestand)') + sel('charge_mode', 'Lademodus der Wallbox');
+    }
+    inner += `${this._errBox()}<button type="button" class="btn blue" data-act="energy-save" ${!e || e.error || this._busy ? 'disabled' : ''}>Speichern</button><button type="button" class="btn" data-act="close">Abbrechen</button>`;
+    return this._sheet('Energie-Anzeige', inner);
+  }
+  async _saveEnergy() {
+    const keys = ['weather', 'grid_power', 'grid_energy', 'pv_power', 'battery_soc', 'vehicle_soc', 'charge_mode', 'vehicle_name'];
+    const values = {}; keys.forEach((k) => { values[k] = this._val('en_' + k); });
+    const kwp = parseFloat(this._val('en_pv_kwp').replace(',', '.')); values.pv_kwp = isNaN(kwp) ? 0 : kwp;
+    this._busy = true; this._render(true);
+    try { await this._h.callWS({ type: 'werner/resident/energy', entry_id: this._r.attributes.entry_id, values }); this._err = null; this._ui.sheet = null; this._fcFor = null; }
+    catch (err) { this._err = err.message || String(err); }
+    this._busy = false; this._render(true);
+  }
   _sheetData() {
     const people = this._people().filter((p) => p.name);
     const rules = [['rule_morning', 'Morgens nichts los'], ['rule_quiet', 'Tagsüber lange still'], ['rule_night', 'Nachts ungewöhnlich aktiv']].filter((x) => this._on(x[0])).map((x) => x[1]);
@@ -761,6 +793,8 @@ ${items.map((x) => `<div style="display:flex;flex-direction:column;gap:2px;borde
       case 'hilfe-ja': this._press('help'); this._ui.sheet = null; this._ui.tab = 'werner'; this._render(true); break;
       case 'info': this._ui.sheet = 'info'; this._render(true); break;
       case 'data': this._ui.sheet = 'data'; this._render(true); break;
+      case 'energy': this._ui.sheet = 'energy'; this._err = null; this._loadEnergy(); break;
+      case 'energy-save': this._saveEnergy(); break;
       case 'add': { const free = this._people().find((p) => !p.name); if (free) { this._ui.adding = free.n; this._render(true); const inp = this.shadowRoot.querySelector(`input[data-text="person_${free.n}_name"]`); if (inp) inp.focus(); } break; }
       case 'add-me': {
         const hh = this._hh; const me = hh && hh.persons.find((p) => p.me);
