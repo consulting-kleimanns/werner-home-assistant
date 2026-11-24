@@ -1,13 +1,25 @@
 {
   "domain": "werner",
   "name": "Werner",
-  "codeowners": ["@consulting-kleimanns"],
+  "after_dependencies": [
+    "frontend",
+    "http",
+    "logbook",
+    "mobile_app",
+    "panel_custom",
+    "websocket_api"
+  ],
+  "codeowners": [
+    "@consulting-kleimanns"
+  ],
   "config_flow": true,
-  "dependencies": ["person"],
+  "dependencies": [
+    "person"
+  ],
   "documentation": "https://github.com/consulting-kleimanns/werner-home-assistant",
   "integration_type": "service",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/consulting-kleimanns/werner-home-assistant/issues",
   "requirements": [],
-  "version": "0.2.0"
+  "version": "0.4.0"
 }

@@ -29,11 +29,24 @@
         "description": "Wählen Sie, woran man sieht, dass der Bewohner aktiv ist, z. B. Stromzähler, Bewegungsmelder oder Tablet. Die Regeln arbeiten erst, wenn mindestens eine Quelle gewählt ist.",
         "data": {
           "activity_sources": "Aktivitätsquellen",
-          "baseload_w": "Grundlast"
+          "baseload_w": "Grundlast",
+          "weather": "Wettervorhersage",
+          "grid_power": "Leistung aus dem Netz",
+          "grid_energy": "Zählerstand",
+          "pv_power": "Leistung der Solaranlage",
+          "pv_kwp": "Größe der Solaranlage",
+          "battery_soc": "Ladestand der Batterie",
+          "vehicle_name": "Name des Autos",
+          "vehicle_soc": "Akku des Autos",
+          "charge_mode": "Lademodus (evcc)"
         },
         "data_description": {
           "activity_sources": "Jede Änderung zählt als Aktivität. Bei Zahlen wie der Leistung zählt nur ein Anstieg über die Grundlast.",
-          "baseload_w": "Strom, der immer läuft (Kühlschrank, Standby). Erst mehr zählt als Aktivität."
+          "baseload_w": "Strom, der immer läuft (Kühlschrank, Standby). Erst mehr zählt als Aktivität.",
+          "weather": "Für die Sonnen-Tipps im Bildschirm Energie.",
+          "grid_power": "Aktuelle Leistung aus dem Netz, z. B. vom Stromzähler.",
+          "pv_kwp": "Spitzenleistung des Balkonkraftwerks oder der Dachanlage, für die Sonnen-Schätzung.",
+          "charge_mode": "Die Auswahl des Lademodus am Ladepunkt, z. B. von evcc."
         }
       }
     }
@@ -66,6 +79,12 @@
       },
       "rule_night": {
         "name": "Regel: Nachts ungewöhnlich aktiv"
+      },
+      "consent_camera": {
+        "name": "Zustimmung: Kamera"
+      },
+      "consent_microphone": {
+        "name": "Zustimmung: Mikrofon"
       }
     },
     "number": {
@@ -111,6 +130,41 @@
       "help": {
         "name": "Ich brauche Hilfe"
       }
+    }
+  },
+  "services": {
+    "test_person": {
+      "name": "Test-Nachricht senden",
+      "description": "Schickt einer Vertrauensperson des Bewohners eine Test-Nachricht.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Bewohner",
+          "description": "Der Bewohner in Werner."
+        },
+        "person": {
+          "name": "Person",
+          "description": "Nummer der Vertrauensperson (1–3)."
+        }
+      }
+    },
+    "ask": {
+      "name": "Beim Bewohner nachfragen",
+      "description": "Werner fragt den Bewohner, ob alles in Ordnung ist – so, als hätte eine Regel ausgelöst.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Bewohner",
+          "description": "Der Bewohner in Werner."
+        },
+        "reason": {
+          "name": "Grund",
+          "description": "Was Werner dem Bewohner dazu sagt."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "resident_not_found": {
+      "message": "Dieser Bewohner ist in Werner nicht eingerichtet."
     }
   }
 }

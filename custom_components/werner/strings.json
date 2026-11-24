@@ -29,11 +29,24 @@
         "description": "Choose what shows that the resident is active, e.g. the power meter, motion sensors or a tablet. Rules only run once at least one source is selected.",
         "data": {
           "activity_sources": "Activity sources",
-          "baseload_w": "Base load"
+          "baseload_w": "Base load",
+          "weather": "Weather forecast",
+          "grid_power": "Grid power",
+          "grid_energy": "Grid meter reading",
+          "pv_power": "Solar power",
+          "pv_kwp": "Solar system size",
+          "battery_soc": "Battery level",
+          "vehicle_name": "Car name",
+          "vehicle_soc": "Car battery level",
+          "charge_mode": "Charging mode (evcc)"
         },
         "data_description": {
           "activity_sources": "Each change counts as activity. For numbers such as power, only a rise above the base load counts.",
-          "baseload_w": "Power that is always used (fridge, standby). Only more than this counts as activity."
+          "baseload_w": "Power that is always used (fridge, standby). Only more than this counts as activity.",
+          "weather": "For the solar tips on the Energy screen.",
+          "grid_power": "Current power from the grid, e.g. from the power meter.",
+          "pv_kwp": "Peak power of the balcony or rooftop system, for the solar estimate.",
+          "charge_mode": "The charging mode select of the charging point, e.g. from evcc."
         }
       }
     }
@@ -66,6 +79,12 @@
       },
       "rule_night": {
         "name": "Rule: unusually active at night"
+      },
+      "consent_camera": {
+        "name": "Consent: camera"
+      },
+      "consent_microphone": {
+        "name": "Consent: microphone"
       }
     },
     "number": {
@@ -111,6 +130,41 @@
       "help": {
         "name": "I need help"
       }
+    }
+  },
+  "services": {
+    "test_person": {
+      "name": "Send test message",
+      "description": "Sends a test message to one of the resident's trusted persons.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Resident",
+          "description": "The resident in Werner."
+        },
+        "person": {
+          "name": "Person",
+          "description": "Number of the trusted person (1–3)."
+        }
+      }
+    },
+    "ask": {
+      "name": "Ask the resident",
+      "description": "Werner asks the resident whether everything is all right – as if a rule had fired.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Resident",
+          "description": "The resident in Werner."
+        },
+        "reason": {
+          "name": "Reason",
+          "description": "What Werner tells the resident."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "resident_not_found": {
+      "message": "This resident is not set up in Werner."
     }
   }
 }

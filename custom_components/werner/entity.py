@@ -33,6 +33,8 @@ class WernerEntity(Entity):
     async def async_added_to_hass(self) -> None:
         """Bei Änderungen des Bewohners neu anzeigen."""
         await super().async_added_to_hass()
+        # Die Oberfläche findet alle Entitäten eines Bewohners über den Status-Sensor.
+        self.bewohner.entity_ids[self._key] = self.entity_id
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass, signal_update(self.bewohner.entry.entry_id), self.async_write_ha_state

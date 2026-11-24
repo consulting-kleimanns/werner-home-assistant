@@ -19,11 +19,53 @@ PLATFORMS: list[Platform] = [
 CONF_NAME = "name"
 CONF_PERSON = "person"
 CONF_NOTIFY = "notify_service"
+# Selbstbestimmung: Werner passt erst auf, wenn der Bewohner selbst zugestimmt hat.
+CONF_CONSENT = "consent"
+CONF_CREATED_BY = "created_by"
+SOURCE_UI = "werner_ui"
 
 # Optionen (vom Helfer im Options-Flow)
 CONF_SOURCES = "activity_sources"
 CONF_BASELOAD = "baseload_w"
 DEFAULT_BASELOAD = 300
+
+# Optionen für Energie und Auto (alle freiwillig)
+CONF_WEATHER = "weather"
+CONF_GRID_POWER = "grid_power"
+CONF_GRID_ENERGY = "grid_energy"
+CONF_PV_POWER = "pv_power"
+CONF_BATTERY_SOC = "battery_soc"
+CONF_PV_KWP = "pv_kwp"
+CONF_VEHICLE_NAME = "vehicle_name"
+CONF_VEHICLE_SOC = "vehicle_soc"
+CONF_CHARGE_MODE = "charge_mode"
+ENERGY_ENTITY_KEYS = (
+    CONF_WEATHER,
+    CONF_GRID_POWER,
+    CONF_GRID_ENERGY,
+    CONF_PV_POWER,
+    CONF_BATTERY_SOC,
+    CONF_VEHICLE_SOC,
+    CONF_CHARGE_MODE,
+)
+
+# Oberfläche „Mein Zuhause“ (Panel in der Seitenleiste und Karte für Dashboards)
+FRONTEND_URL_BASE = "/werner_static"
+FRONTEND_FILE = "werner-mein-zuhause.js"
+PANEL_URL_PATH = "werner"
+PANEL_TITLE = "Mein Zuhause"
+PANEL_ICON = "mdi:home-heart"
+WEBCOMPONENT = "werner-mein-zuhause"
+
+# Dienste
+SERVICE_TEST_PERSON = "test_person"
+SERVICE_ASK = "ask"
+ATTR_CONFIG_ENTRY_ID = "config_entry_id"
+ATTR_PERSON = "person"
+ATTR_REASON = "reason"
+
+# Aktivität einer Quelle höchstens so oft ins Protokoll schreiben
+ACTIVITY_LOG_MINUTES = 30
 
 # Status (Schlüssel; Texte über Übersetzungen)
 STATUS_OK = "ok"
@@ -52,6 +94,9 @@ DEFAULT_SETTINGS: dict[str, object] = {
     "morning_until": 10,
     "quiet_hours": 4,
     "wait_minutes": 10,
+    # Kamera und Mikrofon nur mit Zustimmung des Bewohners (standardmäßig aus)
+    "consent_camera": False,
+    "consent_microphone": False,
 }
 for _n in range(1, PERSON_COUNT + 1):
     for _f in PERSON_FIELDS:

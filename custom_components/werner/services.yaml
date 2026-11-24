@@ -1,0 +1,25 @@
+test_person:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: werner
+    person:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 3
+          mode: box
+ask:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: werner
+    reason:
+      required: false
+      selector:
+        text:
