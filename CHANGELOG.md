@@ -1,5 +1,25 @@
 # Änderungen
 
+## 0.6.0 – unveröffentlicht
+Einrichtung flüssiger und seniorengerecht.
+- **Einrichtungs-Assistent:** Nur noch die Person wählen. Den Namen (Vorname) und das Handy (HA-App, mit der sich die Person anmeldet) findet Werner selbst. Gibt es noch keine Person, sagt der Assistent, was zu tun ist.
+- **„So weit ist Werner eingerichtet“:** Unter Einstellen zeigt eine Liste, was noch fehlt (Handy, Vertrauensperson, Aktivitätsquellen, Signal). Jeder offene Punkt führt direkt an die richtige Stelle. Auf dem Startbildschirm erinnert ein Hinweis, solange etwas fehlt.
+- **Signal mit zwei Geräten:** Am Handy kann man den eigenen Code nicht scannen. Werner bietet deshalb „Code auf anderem Gerät zeigen“ an: einen Link (kopieren oder schicken), der auf Computer oder Tablet direkt den Code öffnet. Werner merkt von selbst, wenn die Verbindung geklappt hat.
+- **Geräte-Auswahl mit aktuellem Wert:** Aktivitätsquellen und Energie-Anzeige zeigen zu jedem Gerät Raum und Wert von gerade eben (z. B. „291 W“, „Bewegung erkannt“, „zu“). Technische Namen werden lesbar gemacht.
+- Eigenes Handy wird beim Einschalten von Werner vorgeschlagen; beim Eintragen weiterer Bewohner nimmt Werner automatisch deren Handy.
+- Anleitung für Helfer überarbeitet; Hinweis, den Port der Signal-App nicht freizugeben.
+
+## 0.5.0 – unveröffentlicht
+- **Signal** als Weg zu den Vertrauenspersonen: Werner schreibt über die App „Signal Messenger“, die Person antwortet mit 1, 2 oder 3. Werner findet die App selbst. Verbinden per QR-Code in „Mein Zuhause“.
+- **Energie-Anzeige** wählt der Bewohner selbst (Wetter, Netz, Zählerstand, Sonne, Batterie, Auto).
+
+## 0.4.0 – unveröffentlicht
+- **Selbstbestimmung:** Bewohner schalten Werner in „Mein Zuhause“ selbst ein und tragen weitere Bewohner ein. Diese müssen mit ihrer eigenen Anmeldung zustimmen; lehnen sie ab, wird der Eintrag gelöscht. Jeder sieht nur seine eigenen Einstellungen und sein Protokoll.
+- **Aktivitätsquellen** wählt der Bewohner selbst (Stromverbrauch, Bewegung und Türen, Fernseher und Musik), dazu die Grundlast.
+
+## 0.3.0 – unveröffentlicht
+- Oberfläche **„Mein Zuhause“** kommt mit der Integration: als Bereich in der Seitenleiste (`/werner`) und als Karte `custom:werner-mein-zuhause`. Bildschirme Start, Werner, Energie, Auto, Einstellen.
+
 ## 0.2.0 – unveröffentlicht
 Erster Schritt zur Werner-Integration, die das YAML-Paket später ersetzt.
 - Installation über HACS (als benutzerdefiniertes Repository) mit den Knöpfen „In HACS öffnen“ und „Werner hinzufügen“ im README.

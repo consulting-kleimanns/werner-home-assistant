@@ -20,7 +20,7 @@ In HACS auf **Herunterladen** tippen und Home Assistant neu starten.
 
 [![Werner hinzufügen](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=werner)
 
-Für jeden Bewohner einmal hinzufügen.
+Der Assistent fragt nur, für wen Werner da sein soll. Danach steht **„Mein Zuhause“** in der Seitenleiste. Dort richtet der Bewohner alles Weitere selbst ein – eine Liste zeigt, was noch fehlt. Weitere Bewohner schalten Werner dort für sich selbst ein.
 
 Die Knöpfe öffnen Ihr eigenes Home Assistant über my.home-assistant.io. Beim ersten Mal fragt die Seite nach der Adresse Ihres Home Assistant. Werner und alle Daten bleiben bei Ihnen zu Hause.
 
@@ -28,25 +28,28 @@ Die Knöpfe öffnen Ihr eigenes Home Assistant über my.home-assistant.io. Beim 
 
 Werner gibt es heute in zwei Formen:
 
-- **YAML-Paket (heute nutzbar):** Helfer, Skripte und Automationen zum Kopieren, mit der Karte „Mein Zuhause“. Für einen Bewohner, Einrichtung von Hand. Anleitung: [Werner als YAML-Paket](docs/einrichtung/README.md).
-- **Integration (Ziel, im Aufbau):** Installation über HACS mit den Knöpfen oben, Einrichtung per Assistent, mehrere Bewohner. Sie übernimmt Schritt für Schritt alles aus dem Paket und ersetzt es dann.
+- **Integration (empfohlen):** Installation über HACS mit den Knöpfen oben, Oberfläche „Mein Zuhause“ inklusive, mehrere Bewohner.
+- **YAML-Paket (Übergang):** Helfer, Skripte und Automationen zum Kopieren, für einen Bewohner. Anleitung: [Werner als YAML-Paket](docs/einrichtung/README.md). Es wird nicht mehr erweitert.
 
 | Teil | YAML-Paket | Integration |
 |---|---|---|
 | Installation | Dateien kopieren | über HACS |
-| Bewohner anlegen | von Hand | Einrichtungs-Assistent |
+| Bewohner anlegen | von Hand | Assistent: nur Person wählen; weitere Bewohner selbst in „Mein Zuhause“ |
 | Nachfragen und Vertrauenspersonen informieren | vorhanden | vorhanden, neustartfest |
-| Wege: HA-App, Signal, E-Mail | vorhanden | HA-App vorhanden, Signal und E-Mail in Arbeit |
-| Dashboard „Mein Zuhause“ | Karte von Hand einbinden | geplant: wird automatisch angelegt |
-| Mehrere Bewohner | nein | vorgesehen: ein Eintrag je Bewohner |
-| Kamera und Mikrofon (nur mit Zustimmung) | nein | geplant |
+| Wege: HA-App, Signal, E-Mail | alle | HA-App und Signal; E-Mail in Arbeit |
+| Oberfläche „Mein Zuhause“ | Karte von Hand einbinden | kommt mit, in der Seitenleiste |
+| Einstellungen durch den Bewohner selbst | teilweise | ja, inklusive Aktivitätsquellen und Energie-Anzeige |
+| Mehrere Bewohner | nein | ja, jeder mit eigener Zustimmung |
+| Kamera und Mikrofon (nur mit Zustimmung) | nein | Zustimmung vorhanden, Auswertung geplant |
 | Aufnahme in die HACS-Standardliste | – | geplant |
+
+Offene Punkte stehen als [Issues](https://github.com/consulting-kleimanns/werner-home-assistant/issues).
 
 ## Inhalt des Repositorys
 
 | Ordner | Inhalt |
 |---|---|
-| `custom_components/werner/` | Integration (Ziel) |
+| `custom_components/werner/` | Integration mit Oberfläche „Mein Zuhause“ |
 | `packages/werner.yaml` | YAML-Paket (Übergang) |
 | `card/` | Karte `mein-zuhause-card` |
 | `scripts/werner_mail.py` | E-Mail-Versand für das YAML-Paket |

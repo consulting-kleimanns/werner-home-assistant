@@ -19,13 +19,23 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
+
+from .geraete import describe, suggest_notify
+from .signal_messenger import SignalError, get_client
 
 from .const import (
+    CONF_BASELOAD,
     CONF_CONSENT,
     CONF_CREATED_BY,
     CONF_NAME,
     CONF_NOTIFY,
     CONF_PERSON,
+    CONF_PV_KWP,
+    CONF_SOURCES,
+    CONF_VEHICLE_NAME,
+    DEFAULT_BASELOAD,
+    ENERGY_ENTITY_KEYS,
     DOMAIN,
     SOURCE_UI,
 )
@@ -42,6 +52,12 @@ def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_update)
     websocket_api.async_register_command(hass, ws_consent)
     websocket_api.async_register_command(hass, ws_remove)
+    websocket_api.async_register_command(hass, ws_sources)
+    websocket_api.async_register_command(hass, ws_set_sources)
+    websocket_api.async_register_command(hass, ws_energy)
+    websocket_api.async_register_command(hass, ws_set_energy)
+    websocket_api.async_register_command(hass, ws_signal_status)
+    websocket_api.async_register_command(hass, ws_signal_qr)
 
 
 # ------------------------------------------------------------------ Hilfen
@@ -130,6 +146,8 @@ def ws_household(hass: HomeAssistant, connection: websocket_api.ActiveConnection
             "has_login": bool(s.attributes.get("user_id")),
             "taken": s.entity_id in taken,
             "me": s.entity_id == me,
+            # Vorschlag fürs Handy: die HA-App, mit der sich diese Person anmeldet.
+            "phone": suggest_notify(hass, s.entity_id) if s.entity_id == me or user.is_admin else "",
         }
         for s in sorted(hass.states.async_all("person"), key=lambda s: s.name)
     ]
@@ -172,7 +190,8 @@ async def ws_add(hass: HomeAssistant, connection: websocket_api.ActiveConnection
             "Diese Person hat keine eigene Anmeldung. Das richtet ein Helfer ein.",
         )
         return
-    notify = _clean_notify(hass, msg.get("notify"))
+    # Ohne Angabe nimmt Werner das Handy, mit dem sich die Person in der HA-App anmeldet.
+    notify = _clean_notify(hass, msg["notify"] if "notify" in msg else suggest_notify(hass, person))
     if notify is None:
         connection.send_error(msg["id"], ERR_INVALID, "Dieses Handy gibt es nicht.")
         return
@@ -274,3 +293,244 @@ async def ws_remove(hass: HomeAssistant, connection: websocket_api.ActiveConnect
         return
     await hass.config_entries.async_remove(entry.entry_id)
     connection.send_result(msg["id"], {})
+
+
+# ---------------------------------------------------- Aktivitätsquellen
+
+# Was als Zeichen für Aktivität taugt – in einfachen Gruppen für die Oberfläche.
+MOTION_CLASSES = {"motion", "occupancy", "presence", "door", "opening", "window", "garage_door", "moving", "vibration"}
+
+
+def _source_group(hass: HomeAssistant, entity_id: str) -> str | None:
+    """Gruppe einer möglichen Aktivitätsquelle oder None, wenn sie nicht passt."""
+    state = hass.states.get(entity_id)
+    if state is None:
+        return None
+    domain = entity_id.split(".", 1)[0]
+    device_class = state.attributes.get("device_class")
+    if domain == "sensor" and device_class == "power":
+        return "strom"
+    if domain == "binary_sensor" and device_class in MOTION_CLASSES:
+        return "bewegung"
+    if domain == "media_player":
+        return "geraete"
+    return None
+
+
+def _own_entity(hass: HomeAssistant, entity_id: str) -> bool:
+    entry = er.async_get(hass).async_get(entity_id)
+    return entry is not None and entry.platform == DOMAIN
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): "werner/sources", vol.Required("entry_id"): str}
+)
+@callback
+def ws_sources(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Welche Geräte Werner beachten könnte – und welche der Bewohner gewählt hat."""
+    entry = _entry(hass, msg["entry_id"])
+    if entry is None or not (connection.user.is_admin or _is_own(hass, entry, connection.user.id)):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst sehen.")
+        return
+    chosen = list(entry.options.get(CONF_SOURCES, []))
+    candidates = []
+    for state in hass.states.async_all(["sensor", "binary_sensor", "media_player"]):
+        group = _source_group(hass, state.entity_id)
+        if group is None or _own_entity(hass, state.entity_id):
+            continue
+        candidates.append(
+            {
+                "entity_id": state.entity_id,
+                **describe(hass, state),
+                "group": group,
+                "state": state.state,
+                "unit": state.attributes.get("unit_of_measurement", ""),
+            }
+        )
+    # Gewählte Quellen, die nicht in die Gruppen passen (vom Helfer eingetragen), trotzdem zeigen.
+    for entity_id in chosen:
+        if not any(c["entity_id"] == entity_id for c in candidates):
+            state = hass.states.get(entity_id)
+            candidates.append(
+                {
+                    "entity_id": entity_id,
+                    **(describe(hass, state) if state else {"name": entity_id, "area": ""}),
+                    "group": "andere",
+                    "state": state.state if state else "unavailable",
+                    "unit": state.attributes.get("unit_of_measurement", "") if state else "",
+                }
+            )
+    candidates.sort(key=lambda c: (c["group"], c["name"].lower()))
+    connection.send_result(
+        msg["id"],
+        {
+            "chosen": chosen,
+            "baseload_w": entry.options.get(CONF_BASELOAD, DEFAULT_BASELOAD),
+            "candidates": candidates,
+        },
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "werner/resident/sources",
+        vol.Required("entry_id"): str,
+        vol.Required("sources"): [str],
+        vol.Optional("baseload_w"): vol.All(vol.Coerce(float), vol.Range(min=0, max=5000)),
+    }
+)
+@callback
+def ws_set_sources(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Der Bewohner bestimmt selbst, worauf Werner achtet."""
+    entry = _entry(hass, msg["entry_id"])
+    if entry is None or not (connection.user.is_admin or _is_own(hass, entry, connection.user.id)):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst ändern.")
+        return
+    already = set(entry.options.get(CONF_SOURCES, []))
+    sources = []
+    for entity_id in dict.fromkeys(msg["sources"]):
+        # Neue Quellen nur aus den passenden Gruppen; Helfer dürfen alles.
+        if entity_id in already or connection.user.is_admin or (
+            _source_group(hass, entity_id) and not _own_entity(hass, entity_id)
+        ):
+            sources.append(entity_id)
+        else:
+            connection.send_error(msg["id"], ERR_INVALID, f"{entity_id} kann Werner nicht beachten.")
+            return
+    options = {**entry.options, CONF_SOURCES: sources}
+    if "baseload_w" in msg:
+        options[CONF_BASELOAD] = msg["baseload_w"]
+    hass.config_entries.async_update_entry(entry, options=options)
+    connection.send_result(msg["id"], {"chosen": sources})
+
+
+# ------------------------------------------------------- Energie-Anzeige
+
+
+def _energy_fits(hass: HomeAssistant, key: str, entity_id: str) -> bool:
+    """Passt die Entität zu diesem Feld der Energie-Anzeige?"""
+    state = hass.states.get(entity_id)
+    if state is None or _own_entity(hass, entity_id):
+        return False
+    domain = entity_id.split(".", 1)[0]
+    dc = state.attributes.get("device_class")
+    return {
+        "weather": domain == "weather",
+        "grid_power": domain == "sensor" and dc == "power",
+        "pv_power": domain == "sensor" and dc == "power",
+        "grid_energy": domain == "sensor" and dc == "energy",
+        "battery_soc": domain == "sensor" and dc == "battery",
+        "vehicle_soc": domain == "sensor" and dc == "battery",
+        "charge_mode": domain in ("select", "input_select"),
+    }.get(key, False)
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): "werner/energy", vol.Required("entry_id"): str}
+)
+@callback
+def ws_energy(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Was die Energie-Anzeige zeigen könnte – und was gewählt ist."""
+    entry = _entry(hass, msg["entry_id"])
+    if entry is None or not (connection.user.is_admin or _is_own(hass, entry, connection.user.id)):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst sehen.")
+        return
+    all_states = hass.states.async_all(["weather", "sensor", "select", "input_select"])
+    described = {s.entity_id: describe(hass, s) for s in all_states}
+    candidates = {
+        key: sorted(
+            (
+                {"entity_id": s.entity_id, **described[s.entity_id]}
+                for s in all_states
+                if _energy_fits(hass, key, s.entity_id)
+            ),
+            key=lambda c: (c["name"].lower(), c["area"].lower()),
+        )
+        for key in ENERGY_ENTITY_KEYS
+    }
+    current = {key: entry.options.get(key, "") for key in ENERGY_ENTITY_KEYS}
+    current[CONF_PV_KWP] = entry.options.get(CONF_PV_KWP, 0)
+    current[CONF_VEHICLE_NAME] = entry.options.get(CONF_VEHICLE_NAME, "")
+    connection.send_result(msg["id"], {"current": current, "candidates": candidates})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "werner/resident/energy",
+        vol.Required("entry_id"): str,
+        vol.Required("values"): {
+            vol.Optional(k): str for k in (*ENERGY_ENTITY_KEYS, CONF_VEHICLE_NAME)
+        }
+        | {vol.Optional(CONF_PV_KWP): vol.All(vol.Coerce(float), vol.Range(min=0, max=100))},
+    }
+)
+@callback
+def ws_set_energy(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Der Bewohner wählt selbst, was die Energie-Anzeige zeigt. Leer heißt: nicht zeigen."""
+    entry = _entry(hass, msg["entry_id"])
+    if entry is None or not (connection.user.is_admin or _is_own(hass, entry, connection.user.id)):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst ändern.")
+        return
+    options = dict(entry.options)
+    for key, value in msg["values"].items():
+        if key in ENERGY_ENTITY_KEYS:
+            value = value.strip()
+            if value and value != entry.options.get(key) and not (
+                connection.user.is_admin or _energy_fits(hass, key, value)
+            ):
+                connection.send_error(msg["id"], ERR_INVALID, f"{value} passt hier nicht.")
+                return
+            if value:
+                options[key] = value
+            else:
+                options.pop(key, None)
+        elif key == CONF_VEHICLE_NAME:
+            options[key] = value.strip()[:40]
+        else:
+            options[key] = value
+    hass.config_entries.async_update_entry(entry, options=options)
+    connection.send_result(msg["id"], {})
+
+
+# ------------------------------------------------------------------- Signal
+
+
+def _has_resident(hass: HomeAssistant, user_id: str, is_admin: bool) -> bool:
+    return is_admin or any(_is_own(hass, e, user_id) for e in _entries(hass))
+
+
+@websocket_api.websocket_command({vol.Required("type"): "werner/signal/status"})
+@websocket_api.async_response
+async def ws_signal_status(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Ist die Signal-App da, und ist ein Konto verbunden? Die Nummer bleibt verborgen."""
+    if not _has_resident(hass, connection.user.id, connection.user.is_admin):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Nur für Bewohner.")
+        return
+    client = get_client(hass)
+    url = await client.async_url()
+    if not url:
+        connection.send_result(msg["id"], {"available": False, "connected": False, "text": "Die Signal-App ist nicht installiert."})
+        return
+    try:
+        accounts = await client.async_accounts()
+    except SignalError as err:
+        connection.send_result(msg["id"], {"available": False, "connected": False, "text": str(err)})
+        return
+    connection.send_result(msg["id"], {"available": True, "connected": bool(accounts), "text": ""})
+
+
+@websocket_api.websocket_command({vol.Required("type"): "werner/signal/qr"})
+@websocket_api.async_response
+async def ws_signal_qr(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """QR-Code zum Verbinden als Bild (base64)."""
+    if not _has_resident(hass, connection.user.id, connection.user.is_admin):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Nur für Bewohner.")
+        return
+    try:
+        png = await get_client(hass).async_qr()
+    except SignalError as err:
+        connection.send_error(msg["id"], ERR_INVALID, str(err))
+        return
+    import base64  # noqa: PLC0415
+
+    connection.send_result(msg["id"], {"image": "data:image/png;base64," + base64.b64encode(png).decode()})

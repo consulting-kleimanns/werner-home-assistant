@@ -15,6 +15,7 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
+from .geraete import suggest_notify
 from .const import (
     CONF_BASELOAD,
     CONF_BATTERY_SOC,
@@ -28,6 +29,7 @@ from .const import (
     CONF_PERSON,
     CONF_PV_KWP,
     CONF_PV_POWER,
+    CONF_SIGNAL_URL,
     CONF_SOURCES,
     CONF_VEHICLE_NAME,
     CONF_VEHICLE_SOC,
@@ -64,39 +66,61 @@ class WernerConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Name, Person und Handy des Bewohners abfragen."""
+        """Nur die Person wählen – Name und Handy findet Werner selbst."""
         errors: dict[str, str] = {}
+        taken = [e.unique_id or e.data.get(CONF_PERSON) for e in self._async_current_entries()]
+        persons = [s.entity_id for s in self.hass.states.async_all("person") if s.entity_id not in taken]
+        if not persons:
+            return self.async_abort(
+                reason="no_person" if not taken else "all_persons_configured"
+            )
 
         if user_input is not None:
-            name = user_input[CONF_NAME].strip()
-            notify = (user_input.get(CONF_NOTIFY) or "").strip()
-            if notify.startswith(NOTIFY_PREFIX):
-                notify = notify[len(NOTIFY_PREFIX):]
+            person = user_input[CONF_PERSON]
+            state = self.hass.states.get(person)
+            name = (user_input.get(CONF_NAME) or "").strip()
+            if not name and state is not None:
+                name = state.name.split(" ")[0]
+            notify = (user_input.get(CONF_NOTIFY) or "").strip().removeprefix(NOTIFY_PREFIX)
+            if not notify:
+                notify = suggest_notify(self.hass, person)
 
+            if state is None:
+                errors[CONF_PERSON] = "person_missing"
             if not name:
                 errors[CONF_NAME] = "name_missing"
             if notify and not self.hass.services.has_service("notify", notify):
                 errors[CONF_NOTIFY] = "notify_not_found"
 
             if not errors:
-                await self.async_set_unique_id(user_input[CONF_PERSON])
+                await self.async_set_unique_id(person)
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
                     title=name,
-                    data={
-                        CONF_NAME: name,
-                        CONF_PERSON: user_input[CONF_PERSON],
-                        CONF_NOTIFY: notify,
-                    },
+                    data={CONF_NAME: name, CONF_PERSON: person, CONF_NOTIFY: notify},
                 )
 
+        phones = sorted(
+            s for s in self.hass.services.async_services_for_domain("notify") if s.startswith("mobile_app_")
+        )
         schema = vol.Schema(
             {
-                vol.Required(CONF_NAME): selector.TextSelector(),
-                vol.Required(CONF_PERSON): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="person")
+                vol.Required(CONF_PERSON, default=persons[0]): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="person", exclude_entities=taken)
                 ),
-                vol.Optional(CONF_NOTIFY): selector.TextSelector(),
+                vol.Optional(CONF_NAME): selector.TextSelector(),
+                vol.Optional(CONF_NOTIFY): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            selector.SelectOptionDict(
+                                value=p, label=p.removeprefix("mobile_app_").replace("_", " ")
+                            )
+                            for p in phones
+                        ],
+                        custom_value=True,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
             }
         )
         if user_input is not None:
@@ -156,6 +180,7 @@ class WernerOptionsFlow(OptionsFlow):
                 vol.Optional(CONF_VEHICLE_NAME): selector.TextSelector(),
                 vol.Optional(CONF_VEHICLE_SOC): entity("sensor"),
                 vol.Optional(CONF_CHARGE_MODE): entity(["select", "input_select"]),
+                vol.Optional(CONF_SIGNAL_URL): selector.TextSelector(),
             }
         )
         return self.async_show_form(

@@ -6,7 +6,7 @@ Richten Sie Werner **gemeinsam mit dem Bewohner** ein. Was der Bewohner selbst e
 
 > Werner ist kein Hausnotruf und kein Medizinprodukt. Im Notfall gilt immer 112.
 
-> **Übergang:** Die Integration ist noch im Aufbau. Wer Werner heute schon nutzen will, nimmt das [YAML-Paket](README.md). Die Schritte 1, 2 und 5 gelten für beide Wege.
+Als Helfer erledigen Sie nur die Technik (Schritte 1 bis 5, etwa eine halbe Stunde). Alles, was der Bewohner selbst entscheidet, stellt er danach in **„Mein Zuhause“** ein – am besten mit Ihnen gemeinsam. Eine Liste dort zeigt, was noch fehlt.
 
 ## Überblick
 
@@ -17,8 +17,9 @@ Richten Sie Werner **gemeinsam mit dem Bewohner** ein. Was der Bewohner selbst e
 | 3 | HACS einrichten | einmal |
 | 4 | Werner herunterladen | einmal |
 | 5 | Signal vorbereiten (empfohlen) | einmal |
-| 6 | Werner hinzufügen und einrichten | je Bewohner |
-| 7 | Testen, Updates, Sicherung | regelmäßig |
+| 6 | Werner hinzufügen | einmal |
+| 7 | Mit dem Bewohner einrichten | je Bewohner |
+| 8 | Testen, Updates, Sicherung | regelmäßig |
 
 ## 1. Home Assistant bereitstellen
 
@@ -72,46 +73,39 @@ Am schnellsten über den Knopf:
 
 ## 5. Signal vorbereiten (empfohlen)
 
-Über Signal erreicht Werner die Vertrauenspersonen kostenlos und ohne zusätzliche App für sie. Dafür braucht Home Assistant die App „Signal Messenger“.
+Über Signal erreicht Werner die Vertrauenspersonen kostenlos und ohne zusätzliche App für sie. Dafür braucht Home Assistant die App „Signal Messenger“. Werner findet sie selbst – eine Adresse müssen Sie nicht eintragen.
 
 1. Einstellungen › Apps › App-Store › ⋮ › Repositories › `https://github.com/haberda/hassio_addons` hinzufügen.
 2. **Signal Messenger** installieren.
 3. Unter Konfiguration den Modus **json-rpc** wählen und die App starten.
+4. Unter **Netzwerk** das Feld für Port 8080 **leer lassen**. Die Schnittstelle hat keine Anmeldung und darf nie aus dem Internet erreichbar sein. Werner spricht sie intern an.
 
-Im Modus `normal` dauert das Erzeugen des QR-Codes sehr lange. Verbunden wird später mit dem Signal-Konto des Bewohners: Der Bewohner zeigt den QR-Code im Dashboard auf dem Tablet und scannt ihn mit seinem Handy (Signal › Einstellungen › Verknüpfte Geräte).
+Im Modus `normal` dauert ein QR-Code sehr lange. Verbunden wird später in „Mein Zuhause“ mit dem Signal-Konto des Bewohners (Schritt 7).
 
-## 6. Werner hinzufügen und einrichten
+## 6. Werner hinzufügen
 
 [![Werner hinzufügen](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=werner)
 
 Oder von Hand: Einstellungen › Geräte & Dienste › Integration hinzufügen › **Werner**.
 
-Der Assistent fragt je Bewohner:
+Der Assistent fragt nur: **Für wen?** Wählen Sie die Person. Den Vornamen und das Handy (die Home-Assistant-App, mit der sich die Person anmeldet) findet Werner selbst. Beides können Sie im selben Fenster ändern.
 
-| Feld | Beispiel |
-|---|---|
-| Name (so spricht Werner ihn an) | Erika |
-| Person in Home Assistant | `person.erika` |
-| Benachrichtigungsdienst des Handys | `mobile_app_erikas_handy` |
+Danach steht **„Mein Zuhause“** in der Seitenleiste – für jeden Benutzer. Weitere Bewohner müssen Sie nicht im Assistenten anlegen: Jeder schaltet Werner in „Mein Zuhause“ für sich selbst ein, oder ein Bewohner trägt einen anderen ein, der dann selbst zustimmt.
 
-Für jeden weiteren Bewohner Werner noch einmal hinzufügen.
+## 7. Mit dem Bewohner einrichten
 
-Danach gibt es für den Bewohner ein Gerät **„Werner · Erika“** (Einstellungen › Geräte & Dienste › Werner) mit allen Einstellungen und Knöpfen.
+Melden Sie sich in der Home-Assistant-App des Bewohners an, oder setzen Sie sich mit ihm an ein Tablet. Unter **Einstellen** steht oben „So weit ist Werner eingerichtet“. Jeder offene Punkt führt mit einem Tipp an die richtige Stelle:
 
-### Aktivitätsquellen einstellen
+- [ ] **Handy** – dort fragt Werner zuerst nach (Reiter „Bewohner“).
+- [ ] **Vertrauenspersonen** – bis zu drei, in der gewünschten Reihenfolge, je mit einem Weg (Reiter „Wer & wie“). Danach jeder Person eine Test-Nachricht schicken.
+- [ ] **Aktivitätsquellen** – woran Werner merkt, dass der Bewohner aktiv ist (Reiter „Sensoren“). Hinter jedem Gerät stehen Raum und aktueller Wert, z. B. „Küche · gerade: 1,8 kW“. So erkennt man den richtigen Stromzähler leicht.
+- [ ] **Signal verbinden** – nur wenn eine Person den Weg Signal hat.
 
-Einstellungen › Geräte & Dienste › Werner › beim Bewohner **Konfigurieren**:
+**Signal verbinden braucht zwei Bildschirme.** Der Bewohner scannt den Code mit dem Handy, auf dem sein Signal läuft. Steht „Mein Zuhause“ gerade auf genau diesem Handy, tippt er auf **„Code auf anderem Gerät zeigen“**. Werner zeigt dann einen Link, der auf Computer oder Tablet direkt den Code öffnet. Werner merkt von selbst, wenn es geklappt hat. Werner schreibt danach mit dem Signal des Bewohners; die Vertrauenspersonen sehen ihn als Absender.
 
-- **Aktivitätsquellen:** z. B. der Leistungssensor des Stromzählers, Bewegungsmelder, das Tablet. Jede Änderung zählt als Aktivität.
-- **Grundlast:** Strom, der immer läuft (Kühlschrank, Standby), z. B. 300 W. Bei Zahlen zählt nur ein Anstieg über die Grundlast.
+Die Regeln „Morgens nichts los“ und „Tagsüber lange still“ arbeiten erst, wenn mindestens eine Aktivitätsquelle gewählt ist – sonst gäbe es Fehlalarme.
 
-Die Regeln „Morgens nichts los“ und „Tagsüber lange still“ arbeiten erst, wenn mindestens eine Quelle gewählt ist – sonst gäbe es Fehlalarme.
-
-### Vertrauenspersonen eintragen
-
-Am Gerät des Bewohners für Person 1 bis 3: **Name**, **Weg** und beim Weg Home-Assistant-App das **App-Gerät** (z. B. `mobile_app_sabines_handy`). Die Vertrauensperson braucht dafür die Home-Assistant-App mit einem eigenen Konto in diesem Home Assistant.
-
-> **In Arbeit:** Die Wege Signal und E-Mail in der Integration, weitere Schritte des Assistenten und das automatisch angelegte Dashboard „Mein Zuhause“. Bis dahin überspringt Werner Personen mit Signal oder E-Mail und schreibt das ins Protokoll.
+Für Helfer gibt es dieselben Einstellungen auch unter Einstellungen › Geräte & Dienste › Werner › **Konfigurieren**.
 
 ### Woran Werner Aktivität erkennt
 
@@ -133,10 +127,10 @@ Aktivität im Haushalt beruhigt Werner nie für einen einzelnen Bewohner: Ist nu
 | Weg | Kosten | Antwort möglich |
 |---|---|---|
 | Home-Assistant-App | kostenlos | ja: 1 kümmere mich, 2 Fehlalarm, 3 nächste Person |
-| Signal | kostenlos | ja |
-| E-Mail | kostenlos (eigenes Postfach für Werner) | nein |
+| Signal | kostenlos | ja: Antwort 1, 2 oder 3 |
+| E-Mail | kostenlos (eigenes Postfach für Werner) | nein – in der Integration noch in Arbeit |
 
-Für E-Mail ein eigenes Postfach nur für Werner anlegen, z. B. bei GMX oder WEB.DE, und dort den SMTP-Zugriff erlauben. Bei Gmail ein App-Passwort verwenden.
+E-Mail gibt es heute nur im YAML-Paket. Dafür ein eigenes Postfach nur für Werner anlegen, z. B. bei GMX oder WEB.DE, und dort den SMTP-Zugriff erlauben. Bei Gmail ein App-Passwort verwenden.
 
 ### Warum nicht WhatsApp oder Threema?
 
@@ -147,7 +141,7 @@ Automatische Nachrichten erlauben beide nur über **kostenpflichtige Geschäftsz
 
 Kostenlose Umwege über WhatsApp verstoßen gegen dessen Nutzungsbedingungen. Die Nummer kann jederzeit gesperrt werden, und nach Updates fallen solche Lösungen oft aus. Für ein Warnsystem ist das zu unsicher. Werner bleibt deshalb bei Home-Assistant-App, Signal und E-Mail.
 
-## 7. Testen, Updates, Sicherung
+## 8. Testen, Updates, Sicherung
 
 - **Testen:** Jeder Vertrauensperson eine Test-Nachricht schicken und kurz nachfragen, ob sie angekommen ist. Einen echten Probealarm nur nach Absprache mit dem Bewohner und den Vertrauenspersonen.
 - **Updates:** HACS zeigt neue Werner-Versionen an. Was sich ändert, steht im [Changelog](../../CHANGELOG.md). Nach jedem Update eine Test-Nachricht schicken.

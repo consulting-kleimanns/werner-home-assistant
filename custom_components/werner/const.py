@@ -27,6 +27,8 @@ SOURCE_UI = "werner_ui"
 # Optionen (vom Helfer im Options-Flow)
 CONF_SOURCES = "activity_sources"
 CONF_BASELOAD = "baseload_w"
+# Adresse der Signal-Messenger-App, z. B. http://<app>:8080 (leer: automatisch suchen)
+CONF_SIGNAL_URL = "signal_url"
 DEFAULT_BASELOAD = 300
 
 # Optionen für Energie und Auto (alle freiwillig)

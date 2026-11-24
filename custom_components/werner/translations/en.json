@@ -2,24 +2,28 @@
   "config": {
     "step": {
       "user": {
-        "title": "Add resident",
-        "description": "Werner is set up once for every resident. Each resident needs their own Home Assistant user and the Home Assistant app on their phone.",
+        "title": "Set up Werner",
+        "description": "Choose the person Werner should look after. Werner finds the name and phone by itself – you can change both here.\n\nAfterwards „Mein Zuhause“ appears in the sidebar. The resident sets up everything else there: whom Werner informs, when it asks, Signal and further residents.",
         "data": {
-          "name": "Name (how Werner addresses them)",
-          "person": "Person in Home Assistant",
-          "notify_service": "Notify service of the resident's phone"
+          "person": "For whom?",
+          "name": "How Werner addresses the person",
+          "notify_service": "Phone of the person"
         },
         "data_description": {
-          "notify_service": "For example mobile_app_ericas_phone. Werner asks the resident here first."
+          "name": "Leave empty: Werner uses the first name.",
+          "notify_service": "Leave empty: Werner uses the phone the person is signed in with in the Home Assistant app. Werner asks there first."
         }
       }
     },
     "error": {
       "name_missing": "Please enter a name.",
-      "notify_not_found": "This notify service does not exist. Check the Home Assistant app on the resident's phone."
+      "person_missing": "This person does not exist.",
+      "notify_not_found": "Home Assistant does not know this phone. Is the Home Assistant app signed in on the phone?"
     },
     "abort": {
-      "already_configured": "This person is already set up in Werner."
+      "already_configured": "This person is already set up in Werner.",
+      "no_person": "There is no person yet. Add one under Settings › People (with „Can log in“) and start again.",
+      "all_persons_configured": "Werner already looks after every person. Add further residents under Settings › People."
     }
   },
   "options": {
@@ -38,7 +42,8 @@
           "battery_soc": "Battery level",
           "vehicle_name": "Car name",
           "vehicle_soc": "Car battery level",
-          "charge_mode": "Charging mode (evcc)"
+          "charge_mode": "Charging mode (evcc)",
+          "signal_url": "Signal app address"
         },
         "data_description": {
           "activity_sources": "Each change counts as activity. For numbers such as power, only a rise above the base load counts.",
@@ -46,7 +51,8 @@
           "weather": "For the solar tips on the Energy screen.",
           "grid_power": "Current power from the grid, e.g. from the power meter.",
           "pv_kwp": "Peak power of the balcony or rooftop system, for the solar estimate.",
-          "charge_mode": "The charging mode select of the charging point, e.g. from evcc."
+          "charge_mode": "The charging mode select of the charging point, e.g. from evcc.",
+          "signal_url": "Leave empty: Werner finds the Signal Messenger app by itself. Otherwise e.g. http://app-name:8080."
         }
       }
     }
