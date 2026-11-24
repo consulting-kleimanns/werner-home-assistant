@@ -498,6 +498,30 @@ ${sorted.map((o) => { const m = MODES[o] || [o, '']; const on = modeEnt.state ==
 ${this._setupCard(false)}<div class="sub" role="tablist" aria-label="Bereiche">${tabs}</div>${body}`;
   }
 
+  /* Beispiel-Nachricht an eine Vertrauensperson – derselbe Aufbau wie in bewohner.py (_message). */
+  _beispiel(p, active) {
+    const r = this._r; const name = (r && r.attributes.resident) || 'Ihr Name';
+    const until = Math.round(Number(this._num('morning_until')) || 10);
+    const wait = Math.round(Number(this._num('wait_minutes')) || 10);
+    const nxt = active[1] ? active[1].name : '';
+    const lines = [
+      'Werner: ' + name + ' meldet sich nicht', '',
+      'Was ist los?',
+      'Es ist schon ' + until + ':15 Uhr und Werner hat bei ' + name + ' heute noch keine Aktivität bemerkt. Werner hat ' + name + ' deshalb auf dem Handy gefragt, ob alles in Ordnung ist. ' + wait + ' Minuten lang kam keine Antwort.', '',
+      'Warum bekommen Sie diese Nachricht?',
+      name + ' hat Sie bei Werner als Vertrauensperson eingetragen' + (active.length > 1 ? ' – Sie sind Nr. 1 von ' + active.length + '.' : '.'), '',
+      'Bitte rufen Sie ' + name + ' an oder schauen Sie vorbei.', '',
+      (p.way === 'e_mail' ? 'Ein Klick genügt:' : p.way === 'signal' ? 'Bitte antworten Sie hier mit einer Zahl:' : 'Antwort mit den Knöpfen:'),
+      '1 = Ich kümmere mich. Werner benachrichtigt dann niemanden sonst.',
+      '2 = Fehlalarm, alles in Ordnung. Werner beendet den Alarm.',
+      '3 = Ich kann gerade nicht. ' + (nxt ? 'Werner fragt dann ' + nxt + '.' : 'Werner rät ' + name + ' dann, selbst 112 anzurufen.'), '',
+      'Im Notfall: 112.'
+    ];
+    return `<details class="card" style="padding:14px"><summary style="font-size:17px;font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center">So sieht eine Nachricht an ${esc(p.name)} aus</summary>
+<div class="small" style="margin:6px 0 8px">Beispiel: Sie haben sich morgens nicht gerührt und auf Werners Frage nicht geantwortet.</div>
+<div style="white-space:pre-wrap;font-size:16px;line-height:1.45;background:#F6F3EC;border-radius:12px;padding:12px">${esc(lines.join('\n'))}</div></details>`;
+  }
+
   _wer() {
     const people = this._people();
     const filled = people.filter((p) => p.name || this._ui.adding === p.n);
@@ -510,8 +534,8 @@ ${this._setupCard(false)}<div class="sub" role="tablist" aria-label="Bereiche">$
       let fields = '';
       if (editingName) fields += `<label class="f">Name der Person<input type="text" data-text="person_${p.n}_name" placeholder="z. B. Sabine (Tochter)" autocomplete="off"></label>`;
       if (p.way === 'ha_app') fields += `<label class="f">Handy mit der Home-Assistant-App<select data-text="person_${p.n}_contact"><option value="">– bitte wählen –</option>${notify.map((s) => `<option value="${esc(s)}" ${p.contact === s ? 'selected' : ''}>${esc(s.replace('mobile_app_', '').replace(/_/g, ' '))}</option>`).join('')}${p.contact && !notify.includes(p.contact) ? `<option value="${esc(p.contact)}" selected>${esc(p.contact)} (nicht gefunden)</option>` : ''}</select></label>`;
-      if (p.way === 'signal') fields += `<label class="f">Handynummer für Signal<input type="tel" data-text="person_${p.n}_phone" value="${esc(p.phone)}" placeholder="+49 170 0000000"></label><div class="small">Die Person antwortet bei einem Alarm einfach mit 1, 2 oder 3.</div>`;
-      if (p.way === 'e_mail') fields += `<label class="f">E-Mail-Adresse<input type="email" data-text="person_${p.n}_e_mail" value="${esc(p.mail)}" placeholder="name@example.org"></label><div class="small">Die Person antwortet mit einem Klick in der E-Mail. Sie braucht dafür nichts zu installieren.</div>`;
+      if (p.way === 'signal') fields += `<label class="f">Handynummer für Signal<input type="tel" data-text="person_${p.n}_phone" value="${esc(p.phone)}" placeholder="+49 170 0000000"></label><div class="small">Bei einem Alarm schreibt Werner dieser Person eine Signal-Nachricht: was los ist und was sie tun kann. Sie antwortet mit einer Zahl – <b>1</b> ich kümmere mich, <b>2</b> Fehlalarm, <b>3</b> ich kann gerade nicht.</div>`;
+      if (p.way === 'e_mail') fields += `<label class="f">E-Mail-Adresse<input type="email" data-text="person_${p.n}_e_mail" value="${esc(p.mail)}" placeholder="name@example.org"></label><div class="small">Bei einem Alarm schreibt Werner dieser Person eine E-Mail: was los ist und was sie tun kann. Sie antwortet mit einem Klick – ich kümmere mich, Fehlalarm oder ich kann gerade nicht. Sie braucht dafür nichts zu installieren.</div>`;
       return `<div class="card" style="padding:14px"><div class="row"><span class="nr">${i + 1}</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:19px;font-weight:700">${esc(p.name || 'Neue Person')}</span><span class="small">${esc(summary || 'Noch kein Weg gewählt')}</span></span></div>
 <div class="small">So erreicht Werner diese Person:</div>
 <div class="chips">${WAYS.map((w) => `<button type="button" class="ch ${p.way === w[0] ? 'on' : ''}" aria-pressed="${p.way === w[0]}" data-way="${p.n}|${w[0]}">${p.way === w[0] ? '✓ ' : ''}${w[1]}</button>`).join('')}<button type="button" class="ch ${p.way === 'off' ? 'on' : ''}" aria-pressed="${p.way === 'off'}" data-way="${p.n}|off">Nicht melden</button></div>
@@ -527,6 +551,7 @@ ${t && t !== 'busy' ? `<div class="box ${t.ok ? 'ok' : 'err'}" style="padding:10
     const mailCard = people.some((p) => p.name && p.way === 'e_mail') ? this._mailCard() : '';
     return `${sig}${mailCard}<div class="txt">Zuerst fragt Werner <b>immer Sie selbst</b> – auf Ihrem Handy. Antworten Sie nicht, informiert er nacheinander:</div>
 ${cards}
+${filled.some((p) => p.name && p.way !== 'off') ? this._beispiel(filled.find((p) => p.name && p.way !== 'off'), filled.filter((p) => p.name && p.way !== 'off')) : ''}
 ${!filled.length ? `<div class="box warn"><div class="txt">Niemand eingetragen: Werner fragt nur Sie selbst und informiert sonst niemanden.</div></div>` : ''}
 ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" data-act="add">+ Person hinzufügen</button>` : ''}
 <div class="small">Die Personen brauchen keine zusätzliche App. Sie bekommen nur die Meldung und die Uhrzeit – keine Bilder, keine Töne, nicht Ihren Tagesablauf.</div>
@@ -790,7 +815,7 @@ ${li('Sie bestimmen alles selbst: <b>wer</b>, <b>wie</b> und <b>wann</b>. Das st
     if (s.busy && !s.image) return `<div class="card" style="align-items:center;text-align:center"><div class="t-m">Einen Moment …</div><div class="txt">Werner fragt die Signal-App. Ein neuer Code kann bis zu 30 Sekunden dauern.</div></div>`;
     if (s.err) return `<div class="box err"><div class="txt">${esc(s.err)}</div><button type="button" class="btn" data-act="sg-check">Noch einmal versuchen</button></div>`;
     if (!s.available) return `<div class="box warn"><div class="t-m">Signal ist noch nicht eingerichtet</div><div class="txt">Dafür fehlt die App „Signal Messenger“ in Home Assistant. Die installiert einmal ein Helfer – verbinden können Sie Signal dann hier selbst.</div></div>`;
-    if (s.connected) return `<div class="box ok"><div class="t-m">Signal ist verbunden</div><div class="txt">Werner schreibt Ihren Vertrauenspersonen über Ihr Signal. Sie antworten mit 1, 2 oder 3.</div></div>`;
+    if (s.connected) return `<div class="box ok"><div class="t-m">Signal ist verbunden</div><div class="txt">Werner schreibt Ihren Vertrauenspersonen über Ihr Signal. Wie so eine Nachricht aussieht, sehen Sie unten bei den Personen.</div></div>`;
     const phone = this._isPhone();
     const why = `<div class="txt">Werner schreibt dann <b>mit Ihrem Signal</b> an Ihre Vertrauenspersonen. Sie sehen Ihren Namen als Absender.</div>`;
     if (this._ui.sgOther) {
