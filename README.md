@@ -24,39 +24,41 @@ Der Assistent fragt nur, für wen Werner da sein soll. Danach steht **„Mein Zu
 
 Die Knöpfe öffnen Ihr eigenes Home Assistant über my.home-assistant.io. Beim ersten Mal fragt die Seite nach der Adresse Ihres Home Assistant. Werner und alle Daten bleiben bei Ihnen zu Hause.
 
+## Als Karte in eigenen Dashboards
+
+„Mein Zuhause“ gibt es auch als Karte, z. B. für ein Tablet an der Wand:
+
+```yaml
+type: custom:werner-mein-zuhause
+screen: werner          # Start-Bildschirm: start, werner, energie, auto, einstellen
+hide_tabs: true         # Reiterleiste ausblenden (optional)
+resident: person.erika  # nur für Helfer: diesen Bewohner zeigen (optional)
+```
+
+Jeder Bewohner sieht immer nur sich selbst; `resident` gilt nur für Administratoren.
+
 ## Stand der Entwicklung
 
-Werner gibt es heute in zwei Formen:
+| Teil | Stand |
+|---|---|
+| Installation | über HACS, Assistent fragt nur nach der Person |
+| Nachfragen und Vertrauenspersonen informieren | vorhanden, neustartfest |
+| Wege: HA-App, Signal, E-Mail | alle drei, mit Antwort 1/2/3 (bei E-Mail per Klick) |
+| Oberfläche „Mein Zuhause“ | kommt mit, in der Seitenleiste und als Karte |
+| Einstellungen durch den Bewohner selbst | ja, inklusive Aktivitätsquellen und Energie-Anzeige |
+| Mehrere Bewohner | ja, jeder mit eigener Zustimmung |
+| Kamera und Mikrofon (nur mit Zustimmung) | Zustimmung vorhanden, Auswertung geplant |
+| Aufnahme in die HACS-Standardliste | geplant |
 
-- **Integration (empfohlen):** Installation über HACS mit den Knöpfen oben, Oberfläche „Mein Zuhause“ inklusive, mehrere Bewohner.
-- **YAML-Paket (Übergang):** Helfer, Skripte und Automationen zum Kopieren, für einen Bewohner. Anleitung: [Werner als YAML-Paket](docs/einrichtung/README.md). Es wird nicht mehr erweitert.
-
-| Teil | YAML-Paket | Integration |
-|---|---|---|
-| Installation | Dateien kopieren | über HACS |
-| Bewohner anlegen | von Hand | Assistent: nur Person wählen; weitere Bewohner selbst in „Mein Zuhause“ |
-| Nachfragen und Vertrauenspersonen informieren | vorhanden | vorhanden, neustartfest |
-| Wege: HA-App, Signal, E-Mail | alle | HA-App und Signal; E-Mail in Arbeit |
-| Oberfläche „Mein Zuhause“ | Karte von Hand einbinden | kommt mit, in der Seitenleiste |
-| Einstellungen durch den Bewohner selbst | teilweise | ja, inklusive Aktivitätsquellen und Energie-Anzeige |
-| Mehrere Bewohner | nein | ja, jeder mit eigener Zustimmung |
-| Kamera und Mikrofon (nur mit Zustimmung) | nein | Zustimmung vorhanden, Auswertung geplant |
-| Aufnahme in die HACS-Standardliste | – | geplant |
-
-Offene Punkte stehen als [Issues](https://github.com/consulting-kleimanns/werner-home-assistant/issues).
+Offene Punkte stehen als [Issues](https://github.com/consulting-kleimanns/werner-home-assistant/issues). Das frühere YAML-Paket ist entfernt; die Integration kann alles, was es konnte. Der letzte Stand mit Paket liegt in Commit [`db2d168`](https://github.com/consulting-kleimanns/werner-home-assistant/tree/db2d168).
 
 ## Inhalt des Repositorys
 
 | Ordner | Inhalt |
 |---|---|
 | `custom_components/werner/` | Integration mit Oberfläche „Mein Zuhause“ |
-| `packages/werner.yaml` | YAML-Paket (Übergang) |
-| `card/` | Karte `mein-zuhause-card` |
-| `scripts/werner_mail.py` | E-Mail-Versand für das YAML-Paket |
-| `themes/` | Theme `mein_zuhause` |
-| `examples/` | Beispiel-Dashboard mit Musterdaten |
-| `blueprints/` | geplant: weitere Aktivitätsquellen |
 | `docs/` | Anleitungen |
+| `tests/` | automatische Tests |
 
 ## Grundsätze
 
@@ -70,7 +72,6 @@ Offene Punkte stehen als [Issues](https://github.com/consulting-kleimanns/werner
 
 - [So funktioniert Werner – in einfacher Sprache](docs/einfach/so-funktioniert-werner.md)
 - [Installation und Einrichtung – für Helfer](docs/einrichtung/installation.md)
-- [Werner als YAML-Paket – Übergangslösung](docs/einrichtung/README.md)
 - [Energie (optional)](docs/energie/README.md)
 - [Datenschutz](docs/datenschutz.md)
 
@@ -81,7 +82,6 @@ Diese Bausteine werden nur verlinkt, nicht mitgeliefert. Es gelten ihre eigenen 
 - [Home Assistant](https://www.home-assistant.io/)
 - [HACS](https://hacs.xyz/)
 - App „Signal Messenger“ für Home Assistant ([haberda/hassio_addons](https://github.com/haberda/hassio_addons)) auf Basis von [signal-cli-rest-api](https://github.com/bbernhard/signal-cli-rest-api)
-- [navbar-card](https://github.com/joseluis9595/lovelace-navbar-card)
 - optional [evcc](https://evcc.io/)
 
 ## Mitmachen

@@ -22,6 +22,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 
 from .geraete import describe, suggest_notify
+from .mail import SECURITY_SSL, SECURITY_STARTTLS, MailError, get_mail
 from .signal_messenger import SignalError, get_client
 
 from .const import (
@@ -58,6 +59,9 @@ def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_set_energy)
     websocket_api.async_register_command(hass, ws_signal_status)
     websocket_api.async_register_command(hass, ws_signal_qr)
+    websocket_api.async_register_command(hass, ws_mail_status)
+    websocket_api.async_register_command(hass, ws_mail_set)
+    websocket_api.async_register_command(hass, ws_mail_test)
 
 
 # ------------------------------------------------------------------ Hilfen
@@ -534,3 +538,58 @@ async def ws_signal_qr(hass: HomeAssistant, connection: websocket_api.ActiveConn
     import base64  # noqa: PLC0415
 
     connection.send_result(msg["id"], {"image": "data:image/png;base64," + base64.b64encode(png).decode()})
+
+
+# ------------------------------------------------------------------- E-Mail
+
+
+@websocket_api.websocket_command({vol.Required("type"): "werner/mail/status"})
+@websocket_api.async_response
+async def ws_mail_status(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Ist der E-Mail-Versand eingerichtet? Helfer sehen die Einstellungen (ohne Passwort)."""
+    mail = get_mail(hass)
+    await mail.async_load()
+    if connection.user.is_admin:
+        connection.send_result(msg["id"], {**mail.public(), "may_edit": True})
+    else:
+        connection.send_result(msg["id"], {"configured": mail.configured, "may_edit": False})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "werner/mail/set",
+        vol.Required("server"): vol.All(str, vol.Length(min=3, max=120)),
+        vol.Required("port"): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
+        vol.Required("security"): vol.In([SECURITY_STARTTLS, SECURITY_SSL]),
+        vol.Required("user"): vol.All(str, vol.Length(min=3, max=120)),
+        vol.Optional("password", default=""): str,
+        vol.Optional("sender_name", default="Werner"): vol.All(str, vol.Length(max=60)),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_mail_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """E-Mail-Postfach für Werner eintragen (nur Helfer)."""
+    values = {k: msg[k] for k in ("server", "port", "security", "user", "password", "sender_name")}
+    await get_mail(hass).async_save(values)
+    connection.send_result(msg["id"], get_mail(hass).public())
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): "werner/mail/test", vol.Required("to"): vol.All(str, vol.Length(min=3, max=200))}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_mail_test(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Test-E-Mail an eine Adresse (nur Helfer)."""
+    try:
+        await get_mail(hass).async_send(
+            msg["to"],
+            "Werner: Test-E-Mail",
+            "Hallo,\n\ndas ist eine Test-E-Mail von Werner. Wenn Sie diese E-Mail lesen, "
+            "funktioniert der Versand.\n\n– Werner",
+        )
+    except MailError as err:
+        connection.send_result(msg["id"], {"ok": False, "text": str(err)})
+        return
+    connection.send_result(msg["id"], {"ok": True, "text": f"Test-E-Mail an {msg['to']} gesendet."})

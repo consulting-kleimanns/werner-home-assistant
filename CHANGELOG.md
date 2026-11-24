@@ -1,5 +1,11 @@
 # Änderungen
 
+## 0.7.0 – unveröffentlicht
+- **E-Mail** als Weg zu den Vertrauenspersonen. Ein Helfer trägt einmal ein eigenes Postfach für Werner ein (Einstellen › Wer & wie, nur für Administratoren, mit Vorlagen für GMX, WEB.DE, Gmail, T-Online, Outlook und Test-E-Mail). Das Passwort liegt im Speicher von Home Assistant, nicht in einer Entität.
+- Antwort **per Klick in der E-Mail** (Ich kümmere mich, Fehlalarm, Kann nicht), wenn Home Assistant von außen erreichbar ist. Erst der Knopf auf der geöffneten Seite zählt, damit Virenscanner nichts auslösen. Die Links gelten nur für diesen einen Alarm.
+- Karte einstellbar: `screen`, `hide_tabs`, `resident`.
+- **Aufgeräumt:** YAML-Paket, alte Karte `mein-zuhause-card`, Beispiel-Dashboard, Theme und Mail-Skript entfernt – die Integration kann alles davon. Letzter Stand mit Paket: Commit `db2d168`.
+
 ## 0.6.0 – unveröffentlicht
 Einrichtung flüssiger und seniorengerecht.
 - **Einrichtungs-Assistent:** Nur noch die Person wählen. Den Namen (Vorname) und das Handy (HA-App, mit der sich die Person anmeldet) findet Werner selbst. Gibt es noch keine Person, sagt der Assistent, was zu tun ist.

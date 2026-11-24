@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from html import escape as html_escape
 from collections.abc import Callable, Coroutine
 from datetime import datetime, timedelta
 import logging
@@ -26,6 +27,7 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
+from .mail import MailError, async_register_answers, get_mail
 from .signal_messenger import SignalError, get_client, normalize_number
 
 from .const import (
@@ -77,7 +79,6 @@ JUMP_W = 200
 PROC_ASK = "ask"
 PROC_ESCALATE = "escalate"
 
-WAY_LABELS = {WAY_SIGNAL: "Signal", WAY_MAIL: "E-Mail"}
 SIGNAL_ANSWERS = {"1": "take", "2": "false_alarm", "3": "next"}
 
 _BAD_STATES = (STATE_UNAVAILABLE, STATE_UNKNOWN)
@@ -492,12 +493,10 @@ class Bewohner:
         """Eine Vertrauensperson informieren. Antwort: take, false_alarm, next oder None."""
         if person["way"] == WAY_SIGNAL:
             return await self._contact_signal(n, person, reason)
+        if person["way"] == WAY_MAIL:
+            return await self._contact_mail(n, person, reason)
         if person["way"] != WAY_APP:
-            label = WAY_LABELS.get(person["way"], person["way"])
-            self.log(
-                f"{person['name']} sollte per {label} informiert werden – dieser Weg kommt "
-                "in einer der nächsten Versionen. Nächste Person."
-            )
+            self.log(f"{person['name']}: unbekannter Weg – nächste Person.")
             return None
         if not person["contact"]:
             self.log(
@@ -591,6 +590,84 @@ class Bewohner:
         finally:
             unsub()
 
+    async def _contact_mail(self, n: int, person: dict[str, str], reason: str) -> str | None:
+        """Per E-Mail informieren. Antwort per Klick, wenn Home Assistant von außen erreichbar ist."""
+        if "@" not in person["e_mail"]:
+            self.log(f"{person['name']}: keine E-Mail-Adresse eingetragen – nächste Person.")
+            return None
+        future: asyncio.Future[str | None] = self.hass.loop.create_future()
+
+        @callback
+        def _on_answer(answer: str) -> None:
+            if not future.done():
+                future.set_result(answer)
+
+        links, unregister = async_register_answers(self.hass, _on_answer)
+        what = "braucht Hilfe" if self.status == STATUS_HELP else "antwortet nicht"
+        subject = f"Werner: {self.name} {what}"
+        lines = [
+            f"Hallo {person['name']},",
+            "",
+            reason,
+            "",
+            f"Sie sind Vertrauensperson Nr. {n} von {self.name}. "
+            f"Bitte rufen Sie {self.name} an oder schauen Sie vorbei.",
+        ]
+        if links:
+            lines += [
+                "",
+                "Bitte geben Sie Werner kurz Bescheid:",
+                f"Ich kümmere mich: {links['take']}",
+                f"Fehlalarm: {links['false_alarm']}",
+                f"Kann nicht – nächste Person: {links['next']}",
+            ]
+        lines += [
+            "",
+            f"Ohne Antwort informiert Werner in {CONTACT_WAIT_MINUTES} Minuten die nächste Person.",
+            "Im Notfall: 112.",
+            "",
+            f"– Werner, das Zuhause von {self.name}",
+        ]
+        html_body = None
+        if links:
+            def _btn(url: str, label: str, color: str) -> str:
+                return (
+                    f'<a href="{url}" style="display:block;margin:10px 0;padding:14px 18px;border-radius:12px;'
+                    f'background:{color};color:#fff;font-weight:700;text-decoration:none;text-align:center">{label}</a>'
+                )
+            html_body = (
+                '<div style="font-family:system-ui,sans-serif;font-size:17px;line-height:1.45;color:#1E2421;max-width:520px">'
+                f"<p>Hallo {html_escape(person['name'])},</p><p><b>{html_escape(reason)}</b></p>"
+                f"<p>Sie sind Vertrauensperson Nr. {n} von {html_escape(self.name)}. "
+                f"Bitte rufen Sie {html_escape(self.name)} an oder schauen Sie vorbei.</p>"
+                "<p>Bitte geben Sie Werner kurz Bescheid:</p>"
+                + _btn(links["take"], "1 · Ich kümmere mich", "#2E6B4F")
+                + _btn(links["false_alarm"], "2 · Fehlalarm", "#1F4E79")
+                + _btn(links["next"], "3 · Kann nicht – nächste Person", "#55605A")
+                + f"<p>Ohne Antwort informiert Werner in {CONTACT_WAIT_MINUTES} Minuten die nächste Person.</p>"
+                f"<p><b>Im Notfall: 112.</b></p><p>– Werner, das Zuhause von {html_escape(self.name)}</p></div>"
+            )
+        try:
+            try:
+                await get_mail(self.hass).async_send(person["e_mail"], subject, "\n".join(lines), html_body)
+            except MailError as err:
+                self.log(f"{person['name']} per E-Mail nicht erreichbar: {err} Nächste Person.")
+                return None
+            self.log(f"informiert {person['name']} (Platz {n}) per E-Mail.")
+
+            @callback
+            def _on_timeout(_now: datetime) -> None:
+                if not future.done():
+                    future.set_result(None)
+
+            unsub_timer = async_call_later(self.hass, CONTACT_WAIT_MINUTES * 60, _on_timeout)
+            try:
+                return await future
+            finally:
+                unsub_timer()
+        finally:
+            unregister()
+
     async def async_test_person(self, n: int) -> dict[str, Any]:
         """Test-Nachricht an Vertrauensperson n schicken (Knopf in „Einstellen“)."""
         person = self.person_settings(n)
@@ -613,9 +690,25 @@ class Bewohner:
                 return {"ok": False, "text": str(err)}
             self.log(f"Test-Nachricht an {person['name']} per Signal gesendet.")
             return {"ok": True, "text": "Per Signal gesendet. Fragen Sie kurz nach, ob sie angekommen ist."}
+        if person["way"] == WAY_MAIL:
+            if "@" not in person["e_mail"]:
+                return {"ok": False, "text": "Bitte zuerst eine E-Mail-Adresse eintragen."}
+            try:
+                await get_mail(self.hass).async_send(
+                    person["e_mail"],
+                    f"Werner: Test – Sie sind Vertrauensperson von {self.name}",
+                    f"Hallo {person['name']},\n\n{self.name} hat Sie als {n}. Vertrauensperson bei Werner "
+                    "eingetragen. Das ist nur ein Test – es ist alles in Ordnung. Bei einem echten Alarm "
+                    "bekommen Sie eine ähnliche E-Mail mit Knöpfen zum Antworten.\n\n"
+                    f"– Werner, das Zuhause von {self.name}",
+                )
+            except MailError as err:
+                self.log(f"Test-E-Mail an {person['name']} fehlgeschlagen.")
+                return {"ok": False, "text": str(err)}
+            self.log(f"Test-E-Mail an {person['name']} gesendet.")
+            return {"ok": True, "text": "E-Mail gesendet. Fragen Sie kurz nach, ob sie angekommen ist (auch im Spam-Ordner)."}
         if person["way"] != WAY_APP:
-            label = WAY_LABELS.get(person["way"], person["way"])
-            return {"ok": False, "text": f"{label} kommt in einer der nächsten Versionen."}
+            return {"ok": False, "text": "Diesen Weg kennt Werner nicht."}
         if not person["contact"]:
             return {"ok": False, "text": "Für diese Person ist kein App-Gerät eingetragen."}
         sent = await self._notify(
