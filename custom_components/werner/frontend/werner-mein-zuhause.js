@@ -11,7 +11,7 @@
  * können zwischen den Bewohnern umschalten. Alle Werte kommen aus den Entitäten
  * der Integration; was nicht eingerichtet ist, wird ausgeblendet oder zeigt „–“.
  */
-const WERNER_UI_VERSION = '0.7.0';
+const WERNER_UI_VERSION = '0.8.0';
 
 const C = {
   bg: '#F5F2EA', ink: '#1E2421', muted: '#55605A', line: '#E2DDD1', blue: '#1F4E79', blueBg: '#E6EEF6', blueInk: '#12324F',
@@ -201,6 +201,7 @@ class WernerMeinZuhause extends HTMLElement {
     const r = this._current();
     if (r) {
       this._subscribeForecast(r);
+      if (this._ui.tab === 'energie' && (!this._chT || Date.now() - this._chT > 900000 || this._chFor !== r.entity_id)) this._loadCharts(r);
       if (!this._logT || Date.now() - this._logT > 60000 || this._logFor !== r.entity_id || this._logStatus !== r.state) this._loadLog(r);
     }
     this._render(false);
@@ -317,7 +318,7 @@ class WernerMeinZuhause extends HTMLElement {
     const tick = this._ui.tab === 'einstellen' && this._ui.sub === 'sensoren' ? Math.floor(Date.now() / 10000) : '';
     const sig = (r ? r.state + JSON.stringify(r.attributes) : '') + ids.concat(en).map((i) => this._h.states[i] && this._h.states[i].state).join('|')
       + (r && this._h.states[r.attributes.person] ? this._h.states[r.attributes.person].state : '')
-      + JSON.stringify(this._ui) + JSON.stringify(this._tests) + JSON.stringify(this._hh || null) + JSON.stringify(this._src || null) + JSON.stringify(this._en || null) + JSON.stringify(this._sg || null) + JSON.stringify(this._mail || null) + (this._busy ? 'B' : '') + (this._err || '') + (this._log ? this._log.length : -1) + (this._fc ? this._fc.length : 0) + (this._who || '') + tick;
+      + JSON.stringify(this._ui) + JSON.stringify(this._tests) + JSON.stringify(this._hh || null) + JSON.stringify(this._src || null) + JSON.stringify(this._en || null) + JSON.stringify(this._sg || null) + JSON.stringify(this._mail || null) + (this._busy ? 'B' : '') + (this._err || '') + (this._log ? this._log.length : -1) + (this._fc ? this._fc.length : 0) + (this._chT || 0) + (this._who || '') + tick;
     if (!force && sig === this._sig) return;
     this._sig = sig;
 
@@ -462,6 +463,7 @@ ${this._log === null ? '<div class="muted">Wird geladen …</div>' : log.length 
     if (this._hasCar()) devices.unshift([e.vehicle_name || 'Auto', 'lädt nach Ihrem Lademodus', true]);
     return `<h1>Energie heute</h1>${kwp ? `<div class="muted">Solaranlage mit ${fmtNum(kwp, 'kWp', 1)}.</div>` : ''}
 ${minis.length ? `<div class="grid2">${minis.join('')}</div>` : `<div class="box grey"><div class="txt">Hier können Sie Stromzähler, Solaranlage, Batterie und Auto anzeigen lassen.</div></div>`}
+${this._chartsHtml()}
 <section aria-label="Die nächsten Tage" style="display:flex;flex-direction:column;gap:10px"><div class="t-l">Die nächsten Tage</div>
 ${days.length ? `<div class="days">${days.map((d) => `<button type="button" class="day ${d.good ? 'good' : ''} ${sel && d.i === sel.i ? 'sel' : ''}" data-day="${d.i}" aria-pressed="${sel && d.i === sel.i}"><span style="font-size:16px;font-weight:700">${esc(d.name)}</span><span style="font-size:14px">${esc(d.weather)}</span><span style="font-size:20px;font-weight:700">${d.kwh != null ? fmtNum(d.kwh, 'kWh', 1) : (d.t != null ? fmtNum(d.t, '°C') : '')}</span>${d.kwh != null ? '<span style="font-size:13px">Sonnenstrom</span>' : ''}</button>`).join('')}</div>` : '<div class="muted">Keine Wettervorhersage gefunden.</div>'}
 ${tip ? `<div class="box ${tip.cls || 'grey'}" style="border-radius:16px;padding:14px 16px"><div class="t-m">${esc(tip.title)}</div><div class="txt">${esc(tip.text)}</div></div>` : ''}</section>
@@ -469,6 +471,75 @@ ${tip ? `<div class="box ${tip.cls || 'grey'}" style="border-radius:16px;padding
 ${devices.map((g) => `<div class="card" style="padding:14px;gap:6px"><div class="between" style="align-items:baseline"><span class="t-m">${esc(g[0])}</span><span class="small">${esc(g[1])}</span></div><div class="txt"><b>Beste Zeit:</b> ${esc(bestTime)}</div><span class="badge ${g[2] ? 'info' : 'grey'}">${g[2] ? 'Steuert evcc automatisch' : 'Tipp – Sie schalten selbst ein'}</span></div>`).join('')}
 </section><div class="small">Sonnenstrom ist eine grobe Schätzung aus der Wettervorhersage.</div>
 <button type="button" class="btn" style="min-height:52px;color:${C.blue}" data-act="energy">Was hier angezeigt wird – ändern</button>`;
+  }
+
+  /* ---------- Diagramme (Strompreis, Sonne, Verbrauch) ---------- */
+  async _loadCharts(r) {
+    this._chFor = r.entity_id; this._chT = Date.now();
+    try { this._ch = await this._h.callWS({ type: 'werner/charts', entry_id: r.attributes.entry_id }); } catch (err) { this._ch = { error: err.message || String(err) }; }
+    this._chT = Date.now(); this._render(true);
+  }
+  _when(iso) {
+    const d = new Date(iso); const now = new Date(); const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const diff = Math.round((day(d) - day(now)) / 86400000);
+    return (diff === 0 ? 'heute' : diff === 1 ? 'morgen' : diff === -1 ? 'gestern' : d.toLocaleDateString('de-DE', { weekday: 'long' })) + ' ' + d.getHours() + ' Uhr';
+  }
+  /* Balkendiagramm als SVG. bars: [{t, v, color, faint, dashed}] */
+  _bars(bars, opt) {
+    const W = 360, H = 150, L = 34, R = 6, T = 22, B = 24; const n = bars.length; if (!n) return '';
+    const max = Math.max(opt.minMax || 0, ...bars.map((b) => b.v)) * 1.12 || 1;
+    const bw = (W - L - R) / n; const y = (v) => T + (H - T - B) * (1 - Math.max(0, v) / max);
+    const ticks = [0, max / 2, max * 0.9].map((v) => Math.round(v * (opt.round || 1)) / (opt.round || 1));
+    let g = ticks.map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${C.line}" stroke-width="1"/><text x="${L - 4}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="${C.muted}">${fmtNum(v, '', opt.digits || 0)}</text>`).join('');
+    const nowT = Date.now(); let nowX = null;
+    bars.forEach((b, i) => {
+      const x = L + i * bw; const t = new Date(b.t); const h = t.getHours();
+      if (nowT >= t.getTime() && nowT < t.getTime() + 3600000) nowX = x + bw * ((nowT - t.getTime()) / 3600000);
+      const top = y(b.v); const ht = Math.max(1, H - B - top);
+      g += `<rect x="${(x + 1).toFixed(1)}" y="${top.toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${ht.toFixed(1)}" rx="2" fill="${b.color}" fill-opacity="${b.faint ? 0.35 : 1}" ${b.dashed ? `stroke="${b.color}" stroke-dasharray="3 2" stroke-width="1"` : ''}><title>${esc(this._when(b.t))}: ${esc(fmtNum(b.v, opt.unit, opt.digits || 0))}</title></rect>`;
+      if (h % 6 === 0) g += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="${C.muted}">${h === 0 ? new Date(b.t).toLocaleDateString('de-DE', { weekday: 'short' }) : h + ' Uhr'}</text>`;
+    });
+    if (nowX != null) g += `<line x1="${nowX.toFixed(1)}" x2="${nowX.toFixed(1)}" y1="${T - 6}" y2="${H - B}" stroke="${C.ink}" stroke-width="1.5" stroke-dasharray="4 3"/><text x="${nowX.toFixed(1)}" y="${T - 9}" text-anchor="middle" font-size="12" font-weight="700" fill="${C.ink}">jetzt</text>`;
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(opt.label)}" style="display:block;overflow:visible">${g}</svg>`;
+  }
+  _legend(items) { return `<div style="display:flex;flex-wrap:wrap;gap:12px;font-size:14px;color:${C.muted}">${items.map((i) => `<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:3px;background:${i[0]};opacity:${i[2] ? 0.4 : 1}"></span>${esc(i[1])}</span>`).join('')}</div>`; }
+  _chartsHtml() {
+    const ch = this._ch;
+    if (!this._chT && this._r) { const r = this._r; setTimeout(() => this._loadCharts(r), 0); }
+    if (!ch) return '<div class="muted">Diagramme werden geladen …</div>';
+    if (ch.error) return `<div class="box err"><div class="txt">${esc(ch.error)}</div></div>`;
+    const now = Date.now(); const out = [];
+    if (ch.price && ch.price.points.length) {
+      const p = ch.price.points; const fut = p.filter((x) => new Date(x.t).getTime() + 3600000 > now);
+      const vals = fut.map((x) => x.v).sort((a, b) => a - b); const lo = vals[Math.floor(vals.length / 3)] ?? 0; const hi = vals[Math.floor(vals.length * 2 / 3)] ?? 0;
+      const cur = fut[0]; const cheap = fut.slice().sort((a, b) => a.v - b.v)[0]; const dear = fut.slice().sort((a, b) => b.v - a.v)[0];
+      const bars = p.map((x) => ({ t: x.t, v: x.v, faint: new Date(x.t).getTime() + 3600000 <= now, color: x.v <= lo ? C.green : x.v >= hi ? C.red : '#8A9A91' }));
+      out.push(`<section class="card" aria-label="Strompreis"><div class="between" style="align-items:baseline"><span class="t-m">Strompreis</span>${cur ? `<span style="font-size:22px;font-weight:700">${fmtNum(cur.v, 'ct', 0)}</span>` : ''}</div>
+<div class="txt">${cheap ? `Am günstigsten: <b>${esc(this._when(cheap.t))}</b> (${fmtNum(cheap.v, 'ct')}).` : ''} ${dear ? `Am teuersten: ${esc(this._when(dear.t))} (${fmtNum(dear.v, 'ct')}).` : ''}</div>
+${this._bars(bars, { unit: 'ct', label: 'Strompreis je Stunde' })}
+${this._legend([[C.green, 'günstig'], ['#8A9A91', 'mittel'], [C.red, 'teuer']])}
+<div class="small">${esc(ch.price.label)} in Cent je kWh${p.length && new Date(p[p.length - 1].t).getDate() === new Date().getDate() ? ' · Preise für morgen kommen gegen 13 Uhr' : ''}.</div></section>`);
+    }
+    if (ch.pv && ch.pv.points.length) {
+      const p = ch.pv.points; const top = p.slice().sort((a, b) => b.v - a.v)[0];
+      const restToday = p.filter((x) => new Date(x.t).getDate() === new Date().getDate()).reduce((a, x) => a + x.v, 0);
+      out.push(`<section class="card" aria-label="Sonnenstrom"><div class="t-m">Sonnenstrom – Vorhersage</div>
+<div class="txt">Heute noch etwa <b>${fmtNum(restToday, 'kWh', 1)}</b>, morgen etwa <b>${fmtNum(ch.pv.tomorrow_kwh, 'kWh', 1)}</b>.${top && top.v > 0.05 ? ` Am meisten Sonne: ${esc(this._when(top.t))}.` : ''}</div>
+${this._bars(p.map((x) => ({ t: x.t, v: x.v, color: '#D9A21B' })), { unit: 'kWh', label: 'Sonnenstrom je Stunde', digits: 1, round: 10, minMax: 0.1 })}
+<div class="small">Vorhersage von Forecast.Solar für Ihre Anlage, in kWh je Stunde.</div></section>`);
+    }
+    if (ch.use && (ch.use.past.length || ch.use.forecast.length)) {
+      const u = ch.use; const lastPast = u.past.length ? new Date(u.past[u.past.length - 1].t).getTime() : 0;
+      const bars = u.past.map((x) => ({ t: x.t, v: x.v, color: C.blue })).concat(u.forecast.filter((x) => new Date(x.t).getTime() > lastPast).map((x) => ({ t: x.t, v: x.v, color: C.blue, faint: true, dashed: true })));
+      const until = u.forecast.length ? new Date(u.forecast[u.forecast.length - 1].t).getHours() + 1 : null;
+      out.push(`<section class="card" aria-label="Stromverbrauch"><div class="t-m">Stromverbrauch der Wohnung</div>
+<div class="txt">Heute bisher <b>${fmtNum(u.today_kwh, 'kWh', 1)}</b>.${until != null && u.forecast.length ? ` Bis ${until} Uhr kommen etwa ${fmtNum(u.forecast_kwh, 'kWh', 1)} dazu.` : ''}</div>
+${this._bars(bars, { unit: 'kWh', label: 'Stromverbrauch je Stunde', digits: 1, round: 10, minMax: 0.1 })}
+${this._legend([[C.blue, 'verbraucht'], [C.blue, 'erwartet', true]])}
+<div class="small">Die Erwartung ist der Durchschnitt derselben Uhrzeit an den letzten ${u.days > 1 ? u.days + ' Tagen' : 'Tagen'}.${u.days < 4 ? ' Sie wird mit jedem Tag genauer.' : ''}</div></section>`);
+    }
+    if (!out.length) return '';
+    return `<section aria-label="Strom heute und morgen" style="display:flex;flex-direction:column;gap:10px"><div class="t-l">Strom heute und morgen</div>${out.join('')}</section>`;
   }
 
   /* ---------- Auto ---------- */
@@ -764,6 +835,10 @@ ${li('Sie bestimmen alles selbst: <b>wer</b>, <b>wie</b> und <b>wann</b>. Das st
       const sel = (key, label) => { const opts = e.candidates[key] || []; const cur = e.current[key] || ''; const now = cur ? fmtState(this._h.states[cur]) : ''; return `<label class="f">${label}<select data-f="en_${key}"><option value="">– nicht zeigen –</option>${opts.map((o) => `<option value="${esc(o.entity_id)}" ${cur === o.entity_id ? 'selected' : ''}>${esc(optLabel(o))}</option>`).join('')}${cur && !opts.some((o) => o.entity_id === cur) ? `<option value="${esc(cur)}" selected>${esc(cur)}</option>` : ''}</select>${cur ? `<span class="small" style="font-weight:400">Gerade: ${esc(now)}</span>` : ''}</label>`; };
       inner += sel('weather', 'Wettervorhersage') + sel('grid_power', 'Strom aus dem Netz (gerade)') + sel('grid_energy', 'Zählerstand') + sel('pv_power', 'Sonnenstrom (gerade)')
         + `<label class="f">Größe der Solaranlage in kWp (für die Sonnen-Schätzung)<input type="number" inputmode="decimal" step="0.1" min="0" data-f="en_pv_kwp" value="${esc(e.current.pv_kwp || '')}" placeholder="z. B. 1,5"></label>`
+        + this._srcSel('price_entry', 'Strompreis (Diagramm)', e.price_entries || [], 'Nord Pool')
+        + `<label class="f" style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" data-f="en_price_vat" ${e.current.price_vat !== false ? 'checked' : ''} style="width:24px;height:24px"> Mit Mehrwertsteuer (19 %)</label>`
+        + `<label class="f">Aufschlag in Cent je kWh (Netzentgelt, Abgaben, Anbieter) – 0 zeigt den reinen Börsenpreis<input type="number" inputmode="decimal" step="0.1" min="0" data-f="en_price_markup_ct" value="${esc(e.current.price_markup_ct || '')}" placeholder="z. B. 18"></label>`
+        + this._srcSel('pv_forecast', 'Sonnen-Vorhersage (Diagramm)', e.pv_forecasts || [], 'Forecast.Solar')
         + sel('battery_soc', 'Batterie (Ladestand)')
         + `<label class="f">Name des Autos<input type="text" maxlength="40" data-f="en_vehicle_name" value="${esc(e.current.vehicle_name || '')}" placeholder="z. B. Mein Auto"></label>`
         + sel('vehicle_soc', 'Auto-Akku (Ladestand)') + sel('charge_mode', 'Lademodus der Wallbox');
@@ -771,12 +846,21 @@ ${li('Sie bestimmen alles selbst: <b>wer</b>, <b>wie</b> und <b>wann</b>. Das st
     inner += `${this._errBox()}<button type="button" class="btn blue" data-act="energy-save" ${!e || e.error || this._busy ? 'disabled' : ''}>Speichern</button><button type="button" class="btn" data-act="close">Abbrechen</button>`;
     return this._sheet('Energie-Anzeige', inner);
   }
+  _srcSel(key, label, list, what) {
+    const cur = (this._en && this._en.current[key]) || '';
+    if (!list.length) return `<div class="small"><b>${esc(label)}:</b> Dafür richtet ein Helfer einmal die Integration „${esc(what)}“ ein.</div>`;
+    return `<label class="f">${esc(label)}<select data-f="en_${key}"><option value="" ${cur === '' ? 'selected' : ''}>Automatisch${list.length === 1 ? ' (' + esc(list[0].title) + ')' : ''}</option>${list.map((o) => `<option value="${esc(o.entry_id)}" ${cur === o.entry_id ? 'selected' : ''}>${esc(o.title)}</option>`).join('')}<option value="off" ${cur === 'off' ? 'selected' : ''}>– nicht zeigen –</option></select></label>`;
+  }
   async _saveEnergy() {
     const keys = ['weather', 'grid_power', 'grid_energy', 'pv_power', 'battery_soc', 'vehicle_soc', 'charge_mode', 'vehicle_name'];
     const values = {}; keys.forEach((k) => { values[k] = this._val('en_' + k); });
+    if (this._en && (this._en.price_entries || []).length) values.price_entry = this._val('en_price_entry');
+    if (this._en && (this._en.pv_forecasts || []).length) values.pv_forecast = this._val('en_pv_forecast');
+    const vatEl = this.shadowRoot.querySelector('[data-f="en_price_vat"]'); if (vatEl) values.price_vat = vatEl.checked;
+    const mk = parseFloat((this._val('en_price_markup_ct') || '').replace(',', '.')); values.price_markup_ct = isNaN(mk) ? 0 : mk;
     const kwp = parseFloat(this._val('en_pv_kwp').replace(',', '.')); values.pv_kwp = isNaN(kwp) ? 0 : kwp;
     this._busy = true; this._render(true);
-    try { await this._h.callWS({ type: 'werner/resident/energy', entry_id: this._r.attributes.entry_id, values }); this._err = null; this._ui.sheet = null; this._fcFor = null; }
+    try { await this._h.callWS({ type: 'werner/resident/energy', entry_id: this._r.attributes.entry_id, values }); this._err = null; this._ui.sheet = null; this._fcFor = null; this._chT = 0; }
     catch (err) { this._err = err.message || String(err); }
     this._busy = false; this._render(true);
   }
