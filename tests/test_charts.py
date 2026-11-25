@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from unittest.mock import patch
 
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.util import dt as dt_util
 
@@ -16,7 +16,8 @@ from custom_components.werner.const import CONF_PRICE_MARKUP, CONF_PRICE_VAT
 
 def _nordpool(hass: HomeAssistant, eur_mwh: float) -> MockConfigEntry:
     """Nord Pool mit gleichem Preis in jeder Viertelstunde."""
-    np_entry = MockConfigEntry(domain="nordpool", title="Nord Pool", state=ConfigEntryState.LOADED)
+    # Nicht wirklich laden: die Bibliothek von Nord Pool fehlt in der Testumgebung.
+    np_entry = MockConfigEntry(domain="nordpool", title="Nord Pool")
     np_entry.add_to_hass(hass)
 
     async def _prices(call: ServiceCall) -> dict:
@@ -39,12 +40,16 @@ def _nordpool(hass: HomeAssistant, eur_mwh: float) -> MockConfigEntry:
 
 
 async def test_preis_je_stunde_mit_steuer_und_aufschlag(hass: HomeAssistant, entry) -> None:
-    _nordpool(hass, 200.0)  # 200 €/MWh = 20 ct/kWh
+    np_entry = _nordpool(hass, 200.0)  # 200 €/MWh = 20 ct/kWh
     entry.add_to_hass(hass)
     hass.config_entries.async_update_entry(
         entry, options={**entry.options, CONF_PRICE_VAT: True, CONF_PRICE_MARKUP: 10}
     )
-    data = await async_charts(hass, entry)
+    with patch(
+        "custom_components.werner.charts._loaded",
+        side_effect=lambda _hass, domain: [np_entry] if domain == "nordpool" else [],
+    ):
+        data = await async_charts(hass, entry)
 
     price = data["price"]
     assert price is not None
