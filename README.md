@@ -22,7 +22,7 @@ In HACS auf **Herunterladen** tippen und Home Assistant neu starten.
 
 [![Werner hinzufügen](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=werner)
 
-Der Assistent fragt nur, für wen Werner da sein soll. Danach steht **„Mein Zuhause“** in der Seitenleiste. Dort richtet der Bewohner alles Weitere selbst ein – eine Liste zeigt, was noch fehlt. Weitere Bewohner schalten Werner dort für sich selbst ein.
+Der Assistent fragt nur, für wen „Mein Zuhause“ da sein soll. Danach steht **„Mein Zuhause“** in der Seitenleiste – zuerst mit Energie und Einstellungen. **Das Warnsystem Werner ist eine Option:** Es ist anfangs aus, und der Bewohner schaltet es unter „Einstellen“ bewusst ein. Dann richtet er alles Weitere selbst ein – eine Liste zeigt, was noch fehlt. Weitere Bewohner schalten Werner dort für sich selbst ein.
 
 Die Knöpfe öffnen Ihr eigenes Home Assistant über my.home-assistant.io. Beim ersten Mal fragt die Seite nach der Adresse Ihres Home Assistant. Werner und alle Daten bleiben bei Ihnen zu Hause.
 
