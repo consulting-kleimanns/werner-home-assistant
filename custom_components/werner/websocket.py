@@ -22,6 +22,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 
 from .charts import async_charts, price_entries, pv_forecasts
+from .solar import SolarError, async_remove_plane, async_set_plane, plane_of
 from .geraete import describe, suggest_notify
 from .mail import SECURITY_SSL, SECURITY_STARTTLS, MailError, get_mail
 from .signal_messenger import SignalError, get_client
@@ -63,6 +64,8 @@ def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_energy)
     websocket_api.async_register_command(hass, ws_set_energy)
     websocket_api.async_register_command(hass, ws_charts)
+    websocket_api.async_register_command(hass, ws_pv_set)
+    websocket_api.async_register_command(hass, ws_pv_remove)
     websocket_api.async_register_command(hass, ws_signal_status)
     websocket_api.async_register_command(hass, ws_signal_qr)
     websocket_api.async_register_command(hass, ws_mail_status)
@@ -472,6 +475,8 @@ def ws_energy(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
             "candidates": candidates,
             "price_entries": price_entries(hass),
             "pv_forecasts": pv_forecasts(hass),
+            "plane": plane_of(hass, entry),
+            "has_location": bool(hass.config.latitude or hass.config.longitude),
         },
     )
 
@@ -637,3 +642,41 @@ async def ws_charts(hass: HomeAssistant, connection: websocket_api.ActiveConnect
         connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst sehen.")
         return
     connection.send_result(msg["id"], await async_charts(hass, entry))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "werner/resident/pv",
+        vol.Required("entry_id"): str,
+        vol.Required("watt_peak"): vol.All(vol.Coerce(int), vol.Range(min=50, max=30000)),
+        vol.Required("azimuth"): vol.All(vol.Coerce(int), vol.Range(min=0, max=360)),
+        vol.Required("declination"): vol.All(vol.Coerce(int), vol.Range(min=0, max=90)),
+    }
+)
+@websocket_api.async_response
+async def ws_pv_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Der Bewohner richtet seine Solaranlage für die Sonnen-Vorhersage selbst ein."""
+    entry = _entry(hass, msg["entry_id"])
+    if entry is None or not (connection.user.is_admin or _is_own(hass, entry, connection.user.id)):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst ändern.")
+        return
+    try:
+        fs_id = await async_set_plane(hass, entry, msg["watt_peak"], msg["azimuth"], msg["declination"])
+    except SolarError as err:
+        connection.send_error(msg["id"], ERR_INVALID, str(err))
+        return
+    connection.send_result(msg["id"], {"entry_id": fs_id})
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): "werner/resident/pv_remove", vol.Required("entry_id"): str}
+)
+@websocket_api.async_response
+async def ws_pv_remove(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Die von Werner angelegte Solaranlage wieder entfernen."""
+    entry = _entry(hass, msg["entry_id"])
+    if entry is None or not (connection.user.is_admin or _is_own(hass, entry, connection.user.id)):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst ändern.")
+        return
+    await async_remove_plane(hass, entry)
+    connection.send_result(msg["id"], {})
