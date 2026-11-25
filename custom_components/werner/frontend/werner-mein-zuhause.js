@@ -11,7 +11,7 @@
  * können zwischen den Bewohnern umschalten. Alle Werte kommen aus den Entitäten
  * der Integration; was nicht eingerichtet ist, wird ausgeblendet oder zeigt „–“.
  */
-const WERNER_UI_VERSION = '0.8.0';
+const WERNER_UI_VERSION = '0.9.0';
 
 const C = {
   bg: '#F5F2EA', ink: '#1E2421', muted: '#55605A', line: '#E2DDD1', blue: '#1F4E79', blueBg: '#E6EEF6', blueInk: '#12324F',
@@ -834,17 +834,54 @@ ${li('Sie bestimmen alles selbst: <b>wer</b>, <b>wie</b> und <b>wann</b>. Das st
       const optLabel = (o) => [o.name, o.area, fmtState(this._h.states[o.entity_id])].filter(Boolean).join(' · ');
       const sel = (key, label) => { const opts = e.candidates[key] || []; const cur = e.current[key] || ''; const now = cur ? fmtState(this._h.states[cur]) : ''; return `<label class="f">${label}<select data-f="en_${key}"><option value="">– nicht zeigen –</option>${opts.map((o) => `<option value="${esc(o.entity_id)}" ${cur === o.entity_id ? 'selected' : ''}>${esc(optLabel(o))}</option>`).join('')}${cur && !opts.some((o) => o.entity_id === cur) ? `<option value="${esc(cur)}" selected>${esc(cur)}</option>` : ''}</select>${cur ? `<span class="small" style="font-weight:400">Gerade: ${esc(now)}</span>` : ''}</label>`; };
       inner += sel('weather', 'Wettervorhersage') + sel('grid_power', 'Strom aus dem Netz (gerade)') + sel('grid_energy', 'Zählerstand') + sel('pv_power', 'Sonnenstrom (gerade)')
-        + `<label class="f">Größe der Solaranlage in kWp (für die Sonnen-Schätzung)<input type="number" inputmode="decimal" step="0.1" min="0" data-f="en_pv_kwp" value="${esc(e.current.pv_kwp || '')}" placeholder="z. B. 1,5"></label>`
+        + (e.plane ? '' : `<label class="f">Größe der Solaranlage in kWp (für die Sonnen-Schätzung)<input type="number" inputmode="decimal" step="0.1" min="0" data-f="en_pv_kwp" value="${esc(e.current.pv_kwp || '')}" placeholder="z. B. 1,5"></label>`)
         + this._srcSel('price_entry', 'Strompreis (Diagramm)', e.price_entries || [], 'Nord Pool')
         + `<label class="f" style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" data-f="en_price_vat" ${e.current.price_vat !== false ? 'checked' : ''} style="width:24px;height:24px"> Mit Mehrwertsteuer (19 %)</label>`
         + `<label class="f">Aufschlag in Cent je kWh (Netzentgelt, Abgaben, Anbieter) – 0 zeigt den reinen Börsenpreis<input type="number" inputmode="decimal" step="0.1" min="0" data-f="en_price_markup_ct" value="${esc(e.current.price_markup_ct || '')}" placeholder="z. B. 18"></label>`
-        + this._srcSel('pv_forecast', 'Sonnen-Vorhersage (Diagramm)', e.pv_forecasts || [], 'Forecast.Solar')
+        + this._pvBlock(e)
+        + ((e.pv_forecasts || []).length > 1 ? this._srcSel('pv_forecast', 'Sonnen-Vorhersage (Diagramm)', e.pv_forecasts || [], 'Forecast.Solar') : '')
         + sel('battery_soc', 'Batterie (Ladestand)')
         + `<label class="f">Name des Autos<input type="text" maxlength="40" data-f="en_vehicle_name" value="${esc(e.current.vehicle_name || '')}" placeholder="z. B. Mein Auto"></label>`
         + sel('vehicle_soc', 'Auto-Akku (Ladestand)') + sel('charge_mode', 'Lademodus der Wallbox');
     }
     inner += `${this._errBox()}<button type="button" class="btn blue" data-act="energy-save" ${!e || e.error || this._busy ? 'disabled' : ''}>Speichern</button><button type="button" class="btn" data-act="close">Abbrechen</button>`;
     return this._sheet('Energie-Anzeige', inner);
+  }
+  /* Solaranlage in einfachen Worten: Leistung, Himmelsrichtung, Neigung */
+  _pvBlock(e) {
+    const DIRS = [[180, 'Süden'], [225, 'Südwesten'], [135, 'Südosten'], [270, 'Westen'], [90, 'Osten'], [315, 'Nordwesten'], [45, 'Nordosten'], [0, 'Norden']];
+    const TILTS = [[90, 'senkrecht – am Balkongeländer oder an der Hauswand'], [60, 'steil aufgestellt'], [35, 'schräg wie ein Hausdach'], [15, 'fast flach'], [0, 'ganz flach liegend']];
+    const pl = e.plane; const near = (list, v) => list.reduce((a, b) => (Math.abs(b[0] - v) < Math.abs(a[0] - v) ? b : a))[0];
+    const name = (list, v) => (list.find((x) => x[0] === near(list, v)) || [0, ''])[1];
+    let h = `<div class="card" style="padding:14px;gap:10px"><div class="t-m">Ihre Solaranlage</div>`;
+    if (!e.has_location) return h + `<div class="small">Dafür braucht Home Assistant den Standort Ihres Zuhauses. Den trägt ein Helfer unter Einstellungen › System › Allgemein ein.</div></div>`;
+    if (pl && !this._ui.pvEdit) {
+      h += `<div class="txt">${fmtNum(pl.watt_peak, 'Watt')}, nach <b>${esc(name(DIRS, Number(pl.azimuth)))}</b>, ${esc(name(TILTS, Number(pl.declination)))}.</div>
+<div class="small">Daraus berechnet Werner die Sonnen-Vorhersage.</div>
+<div style="display:flex;gap:10px"><button type="button" class="btn" style="flex:1;min-height:48px" data-act="pv-edit">Ändern</button><button type="button" class="btn" style="flex:1;min-height:48px" data-act="pv-remove">Entfernen</button></div></div>`;
+      return h;
+    }
+    const wp = pl ? pl.watt_peak : ''; const az = pl ? near(DIRS, Number(pl.azimuth)) : 180; const tl = pl ? near(TILTS, Number(pl.declination)) : 90;
+    h += `<div class="small">Werner berechnet damit, wann wie viel Sonnenstrom kommt. Die Leistung steht auf dem Typenschild oder in der Rechnung – ein Balkonkraftwerk hat meist 800 bis 2.000 Watt.</div>
+<label class="f">Leistung der Module in Watt<input type="number" inputmode="numeric" min="50" step="10" data-f="pv_wp" value="${esc(wp)}" placeholder="z. B. 800"></label>
+<label class="f">Wohin zeigen die Module?<select data-f="pv_az">${DIRS.map((d) => `<option value="${d[0]}" ${d[0] === az ? 'selected' : ''}>nach ${esc(d[1])}</option>`).join('')}</select></label>
+<label class="f">Wie sind sie aufgestellt?<select data-f="pv_tilt">${TILTS.map((d) => `<option value="${d[0]}" ${d[0] === tl ? 'selected' : ''}>${esc(d[1])}</option>`).join('')}</select></label>
+<button type="button" class="btn blue" style="min-height:52px" data-act="pv-save" ${this._busy ? 'disabled' : ''}>Solaranlage speichern</button>${pl ? '<button type="button" class="link" data-act="pv-cancel">Abbrechen</button>' : ''}</div>`;
+    return h;
+  }
+  async _pvSave() {
+    const wp = parseInt(this._val('pv_wp').replace(/[^0-9]/g, ''), 10);
+    if (!wp || wp < 50) { this._err = 'Bitte die Leistung in Watt eintragen, zum Beispiel 800.'; this._render(true); return; }
+    this._busy = true; this._err = null; this._render(true);
+    try {
+      await this._h.callWS({ type: 'werner/resident/pv', entry_id: this._r.attributes.entry_id, watt_peak: wp, azimuth: parseInt(this._val('pv_az'), 10), declination: parseInt(this._val('pv_tilt'), 10) });
+      this._ui.pvEdit = false; this._chT = 0; this._busy = false; await this._loadEnergy();
+    } catch (err) { this._busy = false; this._err = err.message || String(err); this._render(true); }
+  }
+  async _pvRemove() {
+    this._busy = true; this._render(true);
+    try { await this._h.callWS({ type: 'werner/resident/pv_remove', entry_id: this._r.attributes.entry_id }); this._chT = 0; } catch (err) { this._err = err.message || String(err); }
+    this._busy = false; await this._loadEnergy();
   }
   _srcSel(key, label, list, what) {
     const cur = (this._en && this._en.current[key]) || '';
@@ -858,7 +895,7 @@ ${li('Sie bestimmen alles selbst: <b>wer</b>, <b>wie</b> und <b>wann</b>. Das st
     if (this._en && (this._en.pv_forecasts || []).length) values.pv_forecast = this._val('en_pv_forecast');
     const vatEl = this.shadowRoot.querySelector('[data-f="en_price_vat"]'); if (vatEl) values.price_vat = vatEl.checked;
     const mk = parseFloat((this._val('en_price_markup_ct') || '').replace(',', '.')); values.price_markup_ct = isNaN(mk) ? 0 : mk;
-    const kwp = parseFloat(this._val('en_pv_kwp').replace(',', '.')); values.pv_kwp = isNaN(kwp) ? 0 : kwp;
+    if (this.shadowRoot.querySelector('[data-f="en_pv_kwp"]')) { const kwp = parseFloat(this._val('en_pv_kwp').replace(',', '.')); values.pv_kwp = isNaN(kwp) ? 0 : kwp; }
     this._busy = true; this._render(true);
     try { await this._h.callWS({ type: 'werner/resident/energy', entry_id: this._r.attributes.entry_id, values }); this._err = null; this._ui.sheet = null; this._fcFor = null; this._chT = 0; }
     catch (err) { this._err = err.message || String(err); }
@@ -1090,6 +1127,10 @@ ${items.map((x) => `<div style="display:flex;flex-direction:column;gap:2px;borde
       case 'data': this._ui.sheet = 'data'; this._render(true); break;
       case 'energy': this._ui.sheet = 'energy'; this._err = null; this._loadEnergy(); break;
       case 'energy-save': this._saveEnergy(); break;
+      case 'pv-save': this._pvSave(); break;
+      case 'pv-edit': this._ui.pvEdit = true; this._render(true); break;
+      case 'pv-cancel': this._ui.pvEdit = false; this._render(true); break;
+      case 'pv-remove': this._pvRemove(); break;
       case 'sg-qr': this._loadSignal(true); break;
       case 'sg-check': this._loadSignal(false); break;
       case 'mail-edit': this._ui.mailEdit = true; this._err = null; this._render(true); break;
