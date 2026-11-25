@@ -1,5 +1,13 @@
 # Änderungen
 
+## 0.8.0 – 2026-11-25
+
+- **Diagramme „Strom heute und morgen“** im Bildschirm Energie, groß und in einfacher Sprache, mit Markierung „jetzt“:
+  - **Strompreis** je Stunde von 6 Stunden zurück bis 24 Stunden voraus (grün günstig, rot teuer) mit Satz „Am günstigsten: …“ – aus der eingebauten Integration Nord Pool, wahlweise mit Mehrwertsteuer und festem Aufschlag.
+  - **Sonnenstrom-Vorhersage** für heute und morgen aus der eingebauten Integration Forecast.Solar.
+  - **Stromverbrauch der Wohnung**: die letzten 12 Stunden aus der Statistik, dazu die Erwartung für die nächsten 6 Stunden (Durchschnitt derselben Uhrzeit an den letzten bis zu 14 Tagen).
+- „Was hier angezeigt wird – ändern“: Quelle für Strompreis und Sonnen-Vorhersage, Mehrwertsteuer und Aufschlag.
+
 ## 0.7.1 – 2026-11-24
 
 - **Verständliche Nachrichten an Vertrauenspersonen.** Jede Nachricht (App, Signal, E-Mail) sagt jetzt: was los ist, warum gerade diese Person sie bekommt, was sie tun soll und was jede Antwort bewirkt (1 = Ich kümmere mich, 2 = Fehlalarm, 3 = Ich kann gerade nicht – mit Namen der nächsten Person).
