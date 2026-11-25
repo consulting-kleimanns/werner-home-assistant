@@ -1,5 +1,9 @@
 # Änderungen
 
+## 0.9.0 – 2026-11-25
+
+- **Solaranlage selbst einrichten:** Unter Energie › „Was hier angezeigt wird – ändern“ fragt Werner in einfachen Worten nach Leistung in Watt, Himmelsrichtung („nach Süden“) und Aufstellung („senkrecht – am Balkongeländer“, „schräg wie ein Hausdach“ …). Werner legt dafür selbst einen Eintrag der eingebauten Integration Forecast.Solar am Standort des Zuhauses an; Ändern und Entfernen betrifft nur diesen eigenen Eintrag. Ein Helfer ist dafür nicht mehr nötig.
+
 ## 0.8.0 – 2026-11-25
 
 - **Diagramme „Strom heute und morgen“** im Bildschirm Energie, groß und in einfacher Sprache, mit Markierung „jetzt“:
