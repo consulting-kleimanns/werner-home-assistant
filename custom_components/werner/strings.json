@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Set up Werner",
-        "description": "Choose the person Werner should look after. Werner finds the name and phone by itself – you can change both here.\n\nAfterwards „Mein Zuhause“ appears in the sidebar. The resident sets up everything else there: whom Werner informs, when it asks, Signal and further residents.",
+        "description": "Choose the person „Mein Zuhause“ is set up for. Werner finds the name and phone by itself – you can change both here.\n\nAfterwards „Mein Zuhause“ appears in the sidebar, first with energy and settings. The Werner alarm system starts switched off: the resident turns it on under „Einstellen“ if they want it – and then decides whom Werner informs and when it asks.",
         "data": {
           "person": "For whom?",
           "name": "How Werner addresses the person",
@@ -66,7 +66,8 @@
           "asking": "Asking",
           "informed": "Trusted person informed",
           "help": "Help requested",
-          "paused": "Paused"
+          "paused": "Paused",
+          "off": "Off"
         }
       },
       "last_activity": {
@@ -74,6 +75,9 @@
       }
     },
     "switch": {
+      "active": {
+        "name": "Werner active"
+      },
       "paused": {
         "name": "Paused"
       },
