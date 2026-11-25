@@ -20,6 +20,7 @@ from .const import (
     CONF_BASELOAD,
     CONF_BATTERY_SOC,
     CONF_CONSENT,
+    CONF_START_ACTIVE,
     CONF_CREATED_BY,
     CONF_CHARGE_MODE,
     CONF_GRID_ENERGY,
@@ -97,7 +98,7 @@ class WernerConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
                     title=name,
-                    data={CONF_NAME: name, CONF_PERSON: person, CONF_NOTIFY: notify},
+                    data={CONF_NAME: name, CONF_PERSON: person, CONF_NOTIFY: notify, CONF_START_ACTIVE: False},
                 )
 
         phones = sorted(
