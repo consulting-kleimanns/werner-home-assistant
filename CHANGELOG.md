@@ -1,5 +1,9 @@
 # Änderungen
 
+## 0.9.1 – 2026-11-25
+
+- **Eigenes Logo:** Werner als freundliches Haus mit Gesicht. Home Assistant zeigt es bei Installation, Update, unter „Geräte & Dienste“ und im Marketplace – in hellem und dunklem Design (Ordner `brand/`, ab Home Assistant 2026.3).
+
 ## 0.9.0 – 2026-11-25
 
 - **Solaranlage selbst einrichten:** Unter Energie › „Was hier angezeigt wird – ändern“ fragt Werner in einfachen Worten nach Leistung in Watt, Himmelsrichtung („nach Süden“) und Aufstellung („senkrecht – am Balkongeländer“, „schräg wie ein Hausdach“ …). Werner legt dafür selbst einen Eintrag der eingebauten Integration Forecast.Solar am Standort des Zuhauses an; Ändern und Entfernen betrifft nur diesen eigenen Eintrag. Ein Helfer ist dafür nicht mehr nötig.
