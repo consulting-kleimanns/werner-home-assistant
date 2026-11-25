@@ -41,6 +41,7 @@ from .const import (
     CONF_BASELOAD,
     CONF_NAME,
     CONF_CONSENT,
+    CONF_START_ACTIVE,
     CONF_NOTIFY,
     CONF_PERSON,
     CONF_SOURCES,
@@ -62,6 +63,7 @@ from .const import (
     STATUS_HELP,
     STATUS_INFORMED,
     STATUS_OK,
+    STATUS_OFF,
     STATUS_PAUSED,
     STATUSES,
     WAY_APP,
@@ -97,6 +99,8 @@ class Bewohner:
         self.consent: bool = bool(entry.data.get(CONF_CONSENT, True))
 
         self.settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
+        if entry.data.get(CONF_START_ACTIVE) is False:
+            self.settings["active"] = False
         self.status: str = STATUS_OK
         self.reason: str = ""
         # Derselbe Grund in der dritten Person – für die Vertrauenspersonen.
@@ -221,7 +225,10 @@ class Bewohner:
             )
         )
 
-        if self.settings["paused"]:
+        if not self.settings["active"]:
+            self.status = STATUS_OFF
+            self.procedure = None
+        elif self.settings["paused"]:
             self.status = STATUS_PAUSED
             self.procedure = None
         elif self.procedure == PROC_ASK:
@@ -308,6 +315,7 @@ class Bewohner:
     def _may_ask(self) -> bool:
         return (
             self.consent
+            and self.settings["active"]
             and not self.settings["paused"]
             and self.status == STATUS_OK
             and not self.busy
@@ -365,9 +373,14 @@ class Bewohner:
         reason spricht den Bewohner an („bei Ihnen“), about beschreibt dasselbe
         für die Vertrauenspersonen („bei Gertraude“).
         """
-        if self.settings["paused"] or not self.consent:
+        if not self.settings["active"] or self.settings["paused"] or not self.consent:
             return
         self._start(self._ask(reason, about))
+
+    def _idle_status(self) -> str:
+        if not self.settings["active"]:
+            return STATUS_OFF
+        return STATUS_PAUSED if self.settings["paused"] else STATUS_OK
 
     @callback
     def all_good(self) -> None:
@@ -376,12 +389,14 @@ class Bewohner:
         self.procedure = None
         self.person_index = 0
         self.last_activity = dt_util.utcnow()
-        self._set_status(STATUS_PAUSED if self.settings["paused"] else STATUS_OK, "")
+        self._set_status(self._idle_status(), "")
         self.log("hat bestätigt: alles gut.")
 
     @callback
     def help(self) -> None:
         """Knopf „Ich brauche Hilfe“: sofort informieren – auch wenn pausiert."""
+        if not self.settings["active"]:
+            return
         reason = f"{self.name} hat bei Werner auf „Ich brauche Hilfe“ gedrückt."
         self._cancel()
         self._set_status(STATUS_HELP, reason)
@@ -393,6 +408,13 @@ class Bewohner:
         """Einstellung ändern (aus den Entitäten)."""
         old = self.settings.get(key)
         self.settings[key] = value
+        if key == "active" and self._started and bool(old) != bool(value):
+            self._cancel()
+            self.procedure = None
+            self.person_index = 0
+            self._set_status(self._idle_status(), "")
+            self.log("Werner ist jetzt eingeschaltet." if value else "Werner ist ausgeschaltet.")
+            return
         if key == "paused" and self._started and bool(old) != bool(value):
             if value:
                 self._cancel()
