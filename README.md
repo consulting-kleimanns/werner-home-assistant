@@ -1,3 +1,5 @@
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="custom_components/werner/brand/dark_logo.png"><img src="custom_components/werner/brand/logo.png" alt="Werner" width="330"></picture></p>
+
 # Werner – ein freundlicher Aufpasser für Senioren
 
 **Werner** ist ein Warnsystem für Home Assistant. Es merkt, wenn es bei einem allein lebenden Menschen ungewöhnlich still ist – oder nachts ungewöhnlich viel passiert. Dann fragt Werner **zuerst den Bewohner selbst**: „Ist alles in Ordnung?“ Erst wenn keine Antwort kommt, informiert Werner nacheinander die Vertrauenspersonen, die der Bewohner selbst ausgewählt hat.
