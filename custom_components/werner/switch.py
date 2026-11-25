@@ -14,6 +14,7 @@ from . import WernerConfigEntry
 from .entity import WernerEntity
 
 KEYS = (
+    "active",
     "paused",
     "rule_morning",
     "rule_quiet",
