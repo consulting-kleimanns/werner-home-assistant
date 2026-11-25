@@ -21,6 +21,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 
+from .charts import async_charts, price_entries, pv_forecasts
 from .geraete import describe, suggest_notify
 from .mail import SECURITY_SSL, SECURITY_STARTTLS, MailError, get_mail
 from .signal_messenger import SignalError, get_client
@@ -32,6 +33,10 @@ from .const import (
     CONF_NAME,
     CONF_NOTIFY,
     CONF_PERSON,
+    CONF_PRICE_ENTRY,
+    CONF_PRICE_MARKUP,
+    CONF_PRICE_VAT,
+    CONF_PV_FORECAST,
     CONF_PV_KWP,
     CONF_SOURCES,
     CONF_VEHICLE_NAME,
@@ -57,6 +62,7 @@ def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_set_sources)
     websocket_api.async_register_command(hass, ws_energy)
     websocket_api.async_register_command(hass, ws_set_energy)
+    websocket_api.async_register_command(hass, ws_charts)
     websocket_api.async_register_command(hass, ws_signal_status)
     websocket_api.async_register_command(hass, ws_signal_qr)
     websocket_api.async_register_command(hass, ws_mail_status)
@@ -455,7 +461,19 @@ def ws_energy(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
     current = {key: entry.options.get(key, "") for key in ENERGY_ENTITY_KEYS}
     current[CONF_PV_KWP] = entry.options.get(CONF_PV_KWP, 0)
     current[CONF_VEHICLE_NAME] = entry.options.get(CONF_VEHICLE_NAME, "")
-    connection.send_result(msg["id"], {"current": current, "candidates": candidates})
+    current[CONF_PRICE_ENTRY] = entry.options.get(CONF_PRICE_ENTRY, "")
+    current[CONF_PRICE_MARKUP] = entry.options.get(CONF_PRICE_MARKUP, 0)
+    current[CONF_PRICE_VAT] = entry.options.get(CONF_PRICE_VAT, True)
+    current[CONF_PV_FORECAST] = entry.options.get(CONF_PV_FORECAST, "")
+    connection.send_result(
+        msg["id"],
+        {
+            "current": current,
+            "candidates": candidates,
+            "price_entries": price_entries(hass),
+            "pv_forecasts": pv_forecasts(hass),
+        },
+    )
 
 
 @websocket_api.websocket_command(
@@ -465,7 +483,10 @@ def ws_energy(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
         vol.Required("values"): {
             vol.Optional(k): str for k in (*ENERGY_ENTITY_KEYS, CONF_VEHICLE_NAME)
         }
-        | {vol.Optional(CONF_PV_KWP): vol.All(vol.Coerce(float), vol.Range(min=0, max=100))},
+        | {vol.Optional(CONF_PV_KWP): vol.All(vol.Coerce(float), vol.Range(min=0, max=100))}
+        | {vol.Optional(CONF_PRICE_ENTRY): str, vol.Optional(CONF_PV_FORECAST): str}
+        | {vol.Optional(CONF_PRICE_MARKUP): vol.All(vol.Coerce(float), vol.Range(min=0, max=100))}
+        | {vol.Optional(CONF_PRICE_VAT): bool},
     }
 )
 @callback
@@ -490,6 +511,16 @@ def ws_set_energy(hass: HomeAssistant, connection: websocket_api.ActiveConnectio
                 options.pop(key, None)
         elif key == CONF_VEHICLE_NAME:
             options[key] = value.strip()[:40]
+        elif key in (CONF_PRICE_ENTRY, CONF_PV_FORECAST):
+            # Leer: automatisch (der einzige vorhandene Eintrag), „off“: nicht zeigen.
+            allowed = {"", "off"} | {
+                c["entry_id"]
+                for c in (price_entries(hass) if key == CONF_PRICE_ENTRY else pv_forecasts(hass))
+            }
+            if value not in allowed:
+                connection.send_error(msg["id"], ERR_INVALID, "Diese Quelle gibt es nicht.")
+                return
+            options[key] = value
         else:
             options[key] = value
     hass.config_entries.async_update_entry(entry, options=options)
@@ -593,3 +624,16 @@ async def ws_mail_test(hass: HomeAssistant, connection: websocket_api.ActiveConn
         connection.send_result(msg["id"], {"ok": False, "text": str(err)})
         return
     connection.send_result(msg["id"], {"ok": True, "text": f"Test-E-Mail an {msg['to']} gesendet."})
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): "werner/charts", vol.Required("entry_id"): str}
+)
+@websocket_api.async_response
+async def ws_charts(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Strompreis, Sonnen-Vorhersage und Verbrauch für die Diagramme."""
+    entry = _entry(hass, msg["entry_id"])
+    if entry is None or not (connection.user.is_admin or _is_own(hass, entry, connection.user.id)):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst sehen.")
+        return
+    connection.send_result(msg["id"], await async_charts(hass, entry))

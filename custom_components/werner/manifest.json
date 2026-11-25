@@ -2,12 +2,15 @@
   "domain": "werner",
   "name": "Werner",
   "after_dependencies": [
+    "forecast_solar",
     "frontend",
     "hassio",
     "http",
     "logbook",
     "mobile_app",
+    "nordpool",
     "panel_custom",
+    "recorder",
     "webhook",
     "websocket_api"
   ],
@@ -23,5 +26,5 @@
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/consulting-kleimanns/werner-home-assistant/issues",
   "requirements": [],
-  "version": "0.7.1"
+  "version": "0.8.0"
 }

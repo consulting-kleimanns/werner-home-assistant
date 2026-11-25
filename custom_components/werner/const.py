@@ -41,6 +41,11 @@ CONF_PV_KWP = "pv_kwp"
 CONF_VEHICLE_NAME = "vehicle_name"
 CONF_VEHICLE_SOC = "vehicle_soc"
 CONF_CHARGE_MODE = "charge_mode"
+# Diagramme: Strompreis (Nord Pool), Sonnen-Vorhersage (Forecast.Solar)
+CONF_PRICE_ENTRY = "price_entry"
+CONF_PRICE_MARKUP = "price_markup_ct"
+CONF_PRICE_VAT = "price_vat"
+CONF_PV_FORECAST = "pv_forecast"
 ENERGY_ENTITY_KEYS = (
     CONF_WEATHER,
     CONF_GRID_POWER,
