@@ -11,7 +11,7 @@
  * können zwischen den Bewohnern umschalten. Alle Werte kommen aus den Entitäten
  * der Integration; was nicht eingerichtet ist, wird ausgeblendet oder zeigt „–“.
  */
-const WERNER_UI_VERSION = '0.9.0';
+const WERNER_UI_VERSION = '1.0.0';
 
 const C = {
   bg: '#F5F2EA', ink: '#1E2421', muted: '#55605A', line: '#E2DDD1', blue: '#1F4E79', blueBg: '#E6EEF6', blueInk: '#12324F',
@@ -242,6 +242,8 @@ class WernerMeinZuhause extends HTMLElement {
   _st(key) { const id = this._id(key); const s = id && this._h.states[id]; return s ? s.state : undefined; }
   _num(key) { const v = parseFloat(this._st(key)); return isNaN(v) ? null : v; }
   _on(key) { return this._st(key) === 'on'; }
+  /* Warnsystem eingeschaltet? Ältere Versionen ohne Schalter gelten als eingeschaltet. */
+  _wernerOn() { return this._id('active') ? this._on('active') : true; }
   _ent(id) { return id ? this._h.states[id] : undefined; }
   _entNum(id) { const s = this._ent(id); const v = s ? parseFloat(s.state) : NaN; return isNaN(v) ? null : v; }
   _energy() { return (this._r && this._r.attributes.energy) || {}; }
@@ -329,8 +331,10 @@ class WernerMeinZuhause extends HTMLElement {
     } else if (r.attributes.consent === false) {
       body = this._consentScreen();
     } else {
-      tabs = [['einstellen', 'Einstellen']].concat(this._hasCar() ? [['auto', 'Auto']] : []).concat([['energie', 'Energie'], ['werner', 'Werner'], ['start', 'Start']]);
-      if (!tabs.find((t) => t[0] === this._ui.tab)) this._ui.tab = 'start';
+      // Werner (das Warnsystem) ist eine Option: Start und Werner gibt es nur, wenn er eingeschaltet ist.
+      const wOn = this._wernerOn();
+      tabs = [['einstellen', 'Einstellen']].concat(this._hasCar() ? [['auto', 'Auto']] : []).concat(wOn ? [['energie', 'Energie'], ['werner', 'Werner'], ['start', 'Start']] : [['energie', 'Energie']]);
+      if (!tabs.find((t) => t[0] === this._ui.tab)) this._ui.tab = wOn ? 'start' : 'energie';
       const fn = { start: this._start, werner: this._werner, energie: this._energie, auto: this._auto, einstellen: this._einstellen }[this._ui.tab];
       body = fn.call(this);
     }
@@ -344,6 +348,10 @@ class WernerMeinZuhause extends HTMLElement {
       else if (this._ui.sheet === 'info') sheet = this._sheetInfo();
       else if (this._ui.sheet === 'data') sheet = this._sheetData();
       else if (this._ui.sheet === 'energy') sheet = this._sheetEnergy();
+      else if (this._ui.sheet === 'werner_off') sheet = this._sheet('Werner ausschalten', `<div style="font-size:26px;font-weight:700;line-height:1.2">Werner ausschalten?</div>
+<div class="txt">Werner fragt dann nicht mehr nach und benachrichtigt niemanden – auch nicht, wenn etwas ungewöhnlich ist. Ihre Einstellungen bleiben gespeichert.</div>
+<button type="button" class="btn" style="min-height:60px;font-size:18px" data-act="close">Nein, eingeschaltet lassen</button>
+<button type="button" class="btn red" style="min-height:60px;font-size:18px" data-act="werner-off-yes">Ja, ausschalten</button>`);
       else if (this._ui.sheet && this._ui.sheet.startsWith('consent_')) sheet = this._sheetConsent(this._ui.sheet);
     }
     const scroll = this.shadowRoot.querySelector('main');
@@ -560,13 +568,33 @@ ${sorted.map((o) => { const m = MODES[o] || [o, '']; const on = modeEnt.state ==
 
   /* ---------- Einstellen ---------- */
   _einstellen() {
+    if (!this._wernerOn()) return this._wernerOff();
     const sub = this._ui.sub; const multi = this._residents().length > 1;
     const tabs = [['wer', 'Wer & wie'], ['wann', 'Wann'], ['sensoren', 'Sensoren'], ['bewohner', 'Bewohner']].map((t) => `<button type="button" role="tab" aria-selected="${sub === t[0]}" class="${sub === t[0] ? 'on' : ''}" data-sub="${t[0]}">${t[1]}</button>`).join('');
     if (sub === 'sensoren' && (!this._src || this._srcFor !== this._r.attributes.entry_id)) this._loadSources();
     const body = sub === 'wann' ? this._wann() : sub === 'sensoren' ? this._sensoren() : sub === 'bewohner' ? this._bewohner() : this._wer();
     return `<h1>Werner einstellen</h1><div class="muted">${multi ? 'Das sind Ihre Einstellungen, ' + esc(this._r.attributes.resident) + '. Nur Sie sehen und ändern sie.' : 'Sie bestimmen, wer wie und wann informiert wird.'}</div>
 <button type="button" class="btn" style="min-height:52px;color:${C.blue}" data-act="info">So funktioniert Werner</button>
-${this._setupCard(false)}<div class="sub" role="tablist" aria-label="Bereiche">${tabs}</div>${body}`;
+${this._setupCard(false)}<div class="sub" role="tablist" aria-label="Bereiche">${tabs}</div>${body}
+<div class="card" style="gap:8px"><div class="t-m">Werner ausschalten</div><div class="small">Werner fragt dann nicht mehr nach und benachrichtigt niemanden. Ihre Einstellungen bleiben gespeichert.</div><button type="button" class="btn" style="min-height:52px" data-act="werner-off">Werner ausschalten</button></div>`;
+  }
+
+  /* Einstellen, solange das Warnsystem aus ist: erklären und bewusst einschalten lassen. */
+  _wernerOff() {
+    return `<h1>Einstellen</h1>
+<section class="card" aria-label="Werner" style="gap:12px">
+<div class="t-m">Werner – Ihr Aufpasser</div>
+<div class="txt">Werner ist ausgeschaltet. Wenn Sie möchten, achtet er darauf, ob bei Ihnen zu Hause alles normal ist.</div>
+<ul style="margin:0;padding-left:22px;font-size:17px;line-height:1.5">
+<li>Fällt ihm etwas auf, fragt er <b>zuerst Sie</b>: „Ist alles in Ordnung?“</li>
+<li>Nur wenn Sie nicht antworten, informiert er Menschen, die <b>Sie selbst</b> auswählen.</li>
+<li>Sie können Werner jederzeit pausieren oder wieder ausschalten.</li>
+</ul>
+<div class="small">Werner ist kein Hausnotruf. Im Notfall: 112.</div>
+<button type="button" class="btn green" style="min-height:64px;font-size:20px" data-act="werner-on" ${this._busy ? 'disabled' : ''}>Werner einschalten</button>
+</section>
+<button type="button" class="btn" style="min-height:52px;color:${C.blue}" data-act="info">So funktioniert Werner</button>
+<div class="small">Energie, Strompreis und Ihre Solaranlage stellen Sie unter „Energie“ ein.</div>`;
   }
 
   /* Beispiel-Nachricht an eine Vertrauensperson – derselbe Aufbau wie in bewohner.py (_message). */
@@ -1127,6 +1155,9 @@ ${items.map((x) => `<div style="display:flex;flex-direction:column;gap:2px;borde
       case 'data': this._ui.sheet = 'data'; this._render(true); break;
       case 'energy': this._ui.sheet = 'energy'; this._err = null; this._loadEnergy(); break;
       case 'energy-save': this._saveEnergy(); break;
+      case 'werner-on': this._call('switch', 'turn_on', { entity_id: this._id('active') }); this._ui.tab = 'einstellen'; this._ui.sub = 'wer'; break;
+      case 'werner-off': this._ui.sheet = 'werner_off'; this._render(true); break;
+      case 'werner-off-yes': this._call('switch', 'turn_off', { entity_id: this._id('active') }); this._ui.sheet = null; this._ui.tab = 'energie'; this._render(true); break;
       case 'pv-save': this._pvSave(); break;
       case 'pv-edit': this._ui.pvEdit = true; this._render(true); break;
       case 'pv-cancel': this._ui.pvEdit = false; this._render(true); break;
