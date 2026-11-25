@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from homeassistant.core import HomeAssistant
@@ -78,7 +80,12 @@ async def test_alarm_per_mail_mit_antwort(hass: HomeAssistant, entry, notify_eri
     await get_mail(hass).async_save(POSTFACH)
     _sabine_mail(bewohner)
     bewohner.help()
-    await run(hass)
+    # Der Versand läuft im Hintergrund (Executor) – kurz darauf warten.
+    for _ in range(50):
+        await run(hass)
+        if sent:
+            break
+        await asyncio.sleep(0.01)
 
     assert len(sent) == 1
     text = sent[0]["text"]
