@@ -62,7 +62,7 @@ def test_nummer_normalisieren() -> None:
 async def test_signal_ich_kuemmere_mich(hass: HomeAssistant, entry, notify_erika, fake_signal) -> None:
     bewohner = await _setup(hass, entry)
     _sabine_signal(bewohner)
-    bewohner.ask("Test-Nachfrage.")
+    bewohner.ask("Bei Ihnen war es still.", "Bei Erika war es still.")
     await run(hass)
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=11))
     await run(hass)
@@ -72,6 +72,11 @@ async def test_signal_ich_kuemmere_mich(hass: HomeAssistant, entry, notify_erika
     number, text = fake_signal.sent[0]
     assert number == "+491700000000"
     assert "Erika" in text and "1 = Ich kümmere mich" in text
+    # Die Vertrauensperson erfährt, was los ist und warum sie die Nachricht bekommt –
+    # in der dritten Person, nicht mit dem „Sie“ für den Bewohner.
+    assert "Bei Erika war es still." in text and "Bei Ihnen" not in text
+    assert "Warum bekommen Sie diese Nachricht?" in text
+    assert "keine Antwort" in text
 
     # Eine Antwort von einer fremden Nummer zählt nicht.
     fake_signal.reply("+49 151 1111111", "1")

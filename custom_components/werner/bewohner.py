@@ -99,6 +99,8 @@ class Bewohner:
         self.settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
         self.status: str = STATUS_OK
         self.reason: str = ""
+        # Derselbe Grund in der dritten Person – für die Vertrauenspersonen.
+        self.about: str = ""
         self.procedure: str | None = None
         self.person_index: int = 0
         self.last_activity: datetime | None = None
@@ -193,6 +195,7 @@ class Bewohner:
         if status in STATUSES:
             self.status = status
         self.reason = str(attributes.get("reason") or "")
+        self.about = str(attributes.get("about") or "")
         procedure = attributes.get("procedure")
         self.procedure = procedure if procedure in (PROC_ASK, PROC_ESCALATE) else None
         try:
@@ -223,7 +226,7 @@ class Bewohner:
             self.procedure = None
         elif self.procedure == PROC_ASK:
             self.log("macht nach einem Neustart mit der Nachfrage weiter.")
-            self._start(self._ask(self.reason or "Werner fragt nach."))
+            self._start(self._ask(self.reason or "Werner fragt nach.", self.about or None))
         elif self.procedure == PROC_ESCALATE:
             self.log("macht nach einem Neustart mit der Benachrichtigung weiter.")
             self._start(self._escalate(self.reason, max(1, self.person_index)))
@@ -318,7 +321,11 @@ class Bewohner:
         if not NIGHT_START_HOUR <= now.hour < NIGHT_END_HOUR:
             return
         if self.settings["rule_night"] and self._may_ask():
-            self.ask("Es ist mitten in der Nacht und Werner hat Aktivität bemerkt.")
+            self.ask(
+                "Es ist mitten in der Nacht und Werner hat Aktivität bemerkt.",
+                f"Es ist mitten in der Nacht ({now:%H:%M} Uhr) und Werner hat bei {self.name} "
+                "Aktivität bemerkt. Das ist ungewöhnlich.",
+            )
 
     async def _async_check_rules(self, _now: datetime | None = None) -> None:
         if not self._may_ask():
@@ -334,23 +341,33 @@ class Bewohner:
             five = local.replace(hour=MORNING_FROM_HOUR, minute=0, second=0, microsecond=0)
             if last is None or last < five:
                 self.ask(
-                    f"Es ist schon {local:%H:%M} Uhr und Werner hat heute noch nichts von Ihnen bemerkt."
+                    f"Es ist schon {local:%H:%M} Uhr und Werner hat heute noch nichts von Ihnen bemerkt.",
+                    f"Es ist schon {local:%H:%M} Uhr und Werner hat bei {self.name} heute noch "
+                    "keine Aktivität bemerkt.",
                 )
                 return
 
         if self.settings["rule_quiet"] and DAY_START_HOUR <= local.hour < DAY_END_HOUR and last:
             hours = (dt_util.utcnow() - last).total_seconds() / 3600
             if hours >= float(self.settings["quiet_hours"]):
-                self.ask(f"Seit etwa {round(hours)} Stunden war es bei Ihnen ganz still.")
+                self.ask(
+                    f"Seit etwa {round(hours)} Stunden war es bei Ihnen ganz still.",
+                    f"Seit etwa {round(hours)} Stunden war es bei {self.name} ganz still – "
+                    "Werner hat keine Aktivität bemerkt.",
+                )
 
     # --------------------------------------------------------- Bedienung
 
     @callback
-    def ask(self, reason: str) -> None:
-        """Beim Bewohner nachfragen (nie ohne Zustimmung oder wenn Werner pausiert ist)."""
+    def ask(self, reason: str, about: str | None = None) -> None:
+        """Beim Bewohner nachfragen (nie ohne Zustimmung oder wenn Werner pausiert ist).
+
+        reason spricht den Bewohner an („bei Ihnen“), about beschreibt dasselbe
+        für die Vertrauenspersonen („bei Gertraude“).
+        """
         if self.settings["paused"] or not self.consent:
             return
-        self._start(self._ask(reason))
+        self._start(self._ask(reason, about))
 
     @callback
     def all_good(self) -> None:
@@ -365,7 +382,7 @@ class Bewohner:
     @callback
     def help(self) -> None:
         """Knopf „Ich brauche Hilfe“: sofort informieren – auch wenn pausiert."""
-        reason = f"{self.name} hat „Ich brauche Hilfe“ gedrückt."
+        reason = f"{self.name} hat bei Werner auf „Ich brauche Hilfe“ gedrückt."
         self._cancel()
         self._set_status(STATUS_HELP, reason)
         self.log("hat „Ich brauche Hilfe“ gedrückt.")
@@ -404,9 +421,11 @@ class Bewohner:
             self._task.cancel()
         self._task = None
 
-    async def _ask(self, reason: str) -> None:
+    async def _ask(self, reason: str, about: str | None = None) -> None:
         self.procedure = PROC_ASK
         self.person_index = 0
+        self.about = about or f"Werner wollte wissen, ob bei {self.name} alles in Ordnung ist."
+        asked = dt_util.now()
         self._set_status(STATUS_ASKING, reason)
         wait = int(self.settings["wait_minutes"])
         self.log(f"fragt nach: {reason}")
@@ -435,11 +454,20 @@ class Bewohner:
             self.log("hat bestätigt: alles gut.")
             return
         if answer == "help":
-            reason = f"{self.name} hat über Werner um Hilfe gebeten."
+            reason = f"{self.name} hat auf Werners Nachfrage „Bitte Hilfe holen“ gewählt."
             self._set_status(STATUS_HELP, reason)
             self.log("hat Hilfe angefordert.")
         else:
-            reason = f"{reason} {self.name} hat auf Werners Nachfrage nicht geantwortet."
+            if self.notify:
+                reason = (
+                    f"{self.about} Werner hat {self.name} deshalb um {asked:%H:%M} Uhr auf dem Handy "
+                    f"gefragt, ob alles in Ordnung ist. {wait} Minuten lang kam keine Antwort."
+                )
+            else:
+                reason = (
+                    f"{self.about} Werner konnte {self.name} nicht selbst fragen, "
+                    "weil kein Handy eingetragen ist."
+                )
             self.log(f"hat nicht innerhalb von {wait} Minuten geantwortet.")
         await self._escalate(reason, 1)
 
@@ -489,6 +517,45 @@ class Bewohner:
             )
         self._changed()
 
+    def _message(self, n: int, reason: str) -> dict[str, Any]:
+        """Bausteine der Nachricht an Vertrauensperson n – für App, Signal und E-Mail gleich.
+
+        Jede Nachricht sagt: was los ist, warum gerade diese Person sie bekommt,
+        was sie tun soll und was jede Antwort bewirkt.
+        """
+        active = [
+            i for i in range(1, PERSON_COUNT + 1)
+            if self.person_settings(i)["name"] and self.person_settings(i)["way"] != WAY_OFF
+        ]
+        later = [i for i in active if i > n]
+        nxt = self.person_settings(later[0])["name"] if later else ""
+        pos = active.index(n) + 1 if n in active else n
+        name = self.name
+        help_ = self.status == STATUS_HELP
+        why = f"{name} hat Sie bei Werner als Vertrauensperson eingetragen"
+        why += f" – Sie sind Nr. {pos} von {len(active)}." if len(active) > 1 else "."
+        if nxt:
+            next_text = f"Werner fragt dann {nxt}."
+            timeout = f"Ohne Antwort fragt Werner in {CONTACT_WAIT_MINUTES} Minuten {nxt}."
+        else:
+            next_text = f"Sie sind die letzte Person auf der Liste. Werner rät {name} dann, selbst 112 anzurufen."
+            timeout = (
+                f"Ohne Antwort rät Werner {name} in {CONTACT_WAIT_MINUTES} Minuten, selbst 112 anzurufen."
+            )
+        return {
+            "title": f"Werner: {name} braucht Hilfe" if help_ else f"Werner: {name} meldet sich nicht",
+            "what": reason,
+            "why": why,
+            "todo": f"Bitte rufen Sie {name} an oder schauen Sie vorbei.",
+            "answers": [
+                ("take", "Ich kümmere mich", "Werner benachrichtigt dann niemanden sonst."),
+                ("false_alarm", "Fehlalarm, alles in Ordnung", "Werner beendet den Alarm."),
+                ("next", "Ich kann gerade nicht", next_text),
+            ],
+            "timeout": timeout,
+            "next": nxt,
+        }
+
     async def _contact(self, n: int, person: dict[str, str], reason: str) -> str | None:
         """Eine Vertrauensperson informieren. Antwort: take, false_alarm, next oder None."""
         if person["way"] == WAY_SIGNAL:
@@ -510,22 +577,18 @@ class Bewohner:
             f"{ACTION_FALSE_ALARM}_{tag}",
             f"{ACTION_NEXT}_{tag}",
         )
-        title = (
-            f"Werner: {self.name} braucht Hilfe"
-            if self.status == STATUS_HELP
-            else f"Werner: {self.name} antwortet nicht"
-        )
+        msg = self._message(n, reason)
         self.log(f"informiert {person['name']} (Platz {n}) per Home-Assistant-App.")
         sent = await self._notify(
             person["contact"],
-            title,
-            f"{reason} Sie sind Vertrauensperson Nr. {n} von {self.name}. "
-            f"Bitte antworten Sie. Ohne Antwort informiert Werner in {CONTACT_WAIT_MINUTES} "
-            "Minuten die nächste Person. Im Notfall: 112.",
+            msg["title"],
+            f"{msg['what']}\n{msg['why']} {msg['todo']}\n"
+            "Geben Sie Werner unten kurz Bescheid. "
+            f"{msg['timeout']} Im Notfall: 112.",
             actions=[
                 (take, "1 · Ich kümmere mich", False),
                 (false_alarm, "2 · Fehlalarm", False),
-                (nxt, "3 · Kann nicht", False),
+                (nxt, "3 · Kann gerade nicht", False),
             ],
             tag=tag,
             urgent=True,
@@ -541,13 +604,17 @@ class Bewohner:
         if not person["phone"]:
             self.log(f"{person['name']}: keine Handynummer für Signal eingetragen – nächste Person.")
             return None
-        what = "braucht Hilfe" if self.status == STATUS_HELP else "antwortet nicht"
+        msg = self._message(n, reason)
         text = (
-            f"Werner: {self.name} {what}.\n{reason}\n\n"
-            f"Sie sind Vertrauensperson Nr. {n} von {self.name}. Bitte antworten Sie mit\n"
-            "1 = Ich kümmere mich\n2 = Fehlalarm\n3 = Kann nicht\n\n"
-            f"Ohne Antwort informiert Werner in {CONTACT_WAIT_MINUTES} Minuten die nächste Person. "
-            "Im Notfall: 112."
+            f"{msg['title']}\n\n"
+            f"Was ist los?\n{msg['what']}\n\n"
+            f"Warum bekommen Sie diese Nachricht?\n{msg['why']}\n\n"
+            f"{msg['todo']}\n\n"
+            "Bitte antworten Sie hier mit einer Zahl:\n"
+            + "\n".join(
+                f"{i} = {label}. {effect}" for i, (_k, label, effect) in enumerate(msg["answers"], 1)
+            )
+            + f"\n\n{msg['timeout']}\nIm Notfall: 112."
         )
         client = get_client(self.hass)
         future: asyncio.Future[str | None] = self.hass.loop.create_future()
@@ -582,9 +649,13 @@ class Bewohner:
                 with contextlib.suppress(SignalError):
                     await client.async_send(
                         person["phone"],
-                        {"take": "Danke, Werner hat es notiert. Sie kümmern sich.",
-                         "false_alarm": "Danke, Werner hat es notiert: Fehlalarm.",
-                         "next": "Danke, Werner informiert die nächste Person."}[answer],
+                        {"take": f"Danke! Werner hat notiert, dass Sie sich um {self.name} kümmern. "
+                                 "Sonst wird niemand benachrichtigt.",
+                         "false_alarm": "Danke! Werner hat den Alarm beendet.",
+                         "next": "Danke für Ihre Antwort. " + (
+                             f"Werner fragt jetzt {msg['next']}." if msg["next"]
+                             else f"Werner rät {self.name}, selbst 112 anzurufen."
+                         )}[answer],
                     )
             return answer
         finally:
@@ -603,27 +674,25 @@ class Bewohner:
                 future.set_result(answer)
 
         links, unregister = async_register_answers(self.hass, _on_answer)
-        what = "braucht Hilfe" if self.status == STATUS_HELP else "antwortet nicht"
-        subject = f"Werner: {self.name} {what}"
+        msg = self._message(n, reason)
+        subject = msg["title"]
         lines = [
             f"Hallo {person['name']},",
             "",
-            reason,
+            "Was ist los?",
+            msg["what"],
             "",
-            f"Sie sind Vertrauensperson Nr. {n} von {self.name}. "
-            f"Bitte rufen Sie {self.name} an oder schauen Sie vorbei.",
+            "Warum bekommen Sie diese E-Mail?",
+            msg["why"],
+            "",
+            msg["todo"],
         ]
         if links:
-            lines += [
-                "",
-                "Bitte geben Sie Werner kurz Bescheid:",
-                f"Ich kümmere mich: {links['take']}",
-                f"Fehlalarm: {links['false_alarm']}",
-                f"Kann nicht – nächste Person: {links['next']}",
-            ]
+            lines += ["", "Bitte geben Sie Werner kurz Bescheid – ein Klick genügt:"]
+            lines += [f"{label}: {links[key]}\n  ({effect})" for key, label, effect in msg["answers"]]
         lines += [
             "",
-            f"Ohne Antwort informiert Werner in {CONTACT_WAIT_MINUTES} Minuten die nächste Person.",
+            msg["timeout"],
             "Im Notfall: 112.",
             "",
             f"– Werner, das Zuhause von {self.name}",
@@ -635,16 +704,20 @@ class Bewohner:
                     f'<a href="{url}" style="display:block;margin:10px 0;padding:14px 18px;border-radius:12px;'
                     f'background:{color};color:#fff;font-weight:700;text-decoration:none;text-align:center">{label}</a>'
                 )
+            colors = {"take": "#2E6B4F", "false_alarm": "#1F4E79", "next": "#55605A"}
             html_body = (
                 '<div style="font-family:system-ui,sans-serif;font-size:17px;line-height:1.45;color:#1E2421;max-width:520px">'
-                f"<p>Hallo {html_escape(person['name'])},</p><p><b>{html_escape(reason)}</b></p>"
-                f"<p>Sie sind Vertrauensperson Nr. {n} von {html_escape(self.name)}. "
-                f"Bitte rufen Sie {html_escape(self.name)} an oder schauen Sie vorbei.</p>"
-                "<p>Bitte geben Sie Werner kurz Bescheid:</p>"
-                + _btn(links["take"], "1 · Ich kümmere mich", "#2E6B4F")
-                + _btn(links["false_alarm"], "2 · Fehlalarm", "#1F4E79")
-                + _btn(links["next"], "3 · Kann nicht – nächste Person", "#55605A")
-                + f"<p>Ohne Antwort informiert Werner in {CONTACT_WAIT_MINUTES} Minuten die nächste Person.</p>"
+                f"<p>Hallo {html_escape(person['name'])},</p>"
+                f"<p><b>Was ist los?</b><br>{html_escape(msg['what'])}</p>"
+                f"<p><b>Warum bekommen Sie diese E-Mail?</b><br>{html_escape(msg['why'])}</p>"
+                f"<p><b>{html_escape(msg['todo'])}</b></p>"
+                "<p>Bitte geben Sie Werner kurz Bescheid – ein Klick genügt:</p>"
+                + "".join(
+                    _btn(links[key], f"{i} · {html_escape(label)}", colors[key])
+                    + f'<div style="font-size:15px;color:#55605A;margin:-4px 0 10px">{html_escape(effect)}</div>'
+                    for i, (key, label, effect) in enumerate(msg["answers"], 1)
+                )
+                + f"<p>{html_escape(msg['timeout'])}</p>"
                 f"<p><b>Im Notfall: 112.</b></p><p>– Werner, das Zuhause von {html_escape(self.name)}</p></div>"
             )
         try:
@@ -681,9 +754,14 @@ class Bewohner:
             try:
                 await get_client(self.hass).async_send(
                     person["phone"],
-                    f"Test von Werner: {self.name} hat Sie als {n}. Vertrauensperson eingetragen. "
-                    "Das ist nur ein Test – es ist alles in Ordnung. Bei einem echten Alarm "
-                    "antworten Sie mit 1, 2 oder 3.",
+                    f"Test von Werner – es ist alles in Ordnung.\n\n"
+                    f"{self.name} hat Sie bei Werner als Vertrauensperson eingetragen. Werner achtet "
+                    f"darauf, ob bei {self.name} zu Hause alles normal ist. Fällt ihm etwas auf, fragt "
+                    f"er zuerst {self.name} selbst. Kommt keine Antwort, schreibt er Ihnen hier, was los ist.\n\n"
+                    "Sie antworten dann mit einer Zahl:\n"
+                    "1 = Ich kümmere mich\n2 = Fehlalarm, alles in Ordnung\n"
+                    "3 = Ich kann gerade nicht (dann fragt Werner die nächste Person)\n\n"
+                    "Auf diese Test-Nachricht müssen Sie nicht antworten.",
                 )
             except SignalError as err:
                 self.log(f"Test-Nachricht an {person['name']} per Signal fehlgeschlagen.")
@@ -697,9 +775,13 @@ class Bewohner:
                 await get_mail(self.hass).async_send(
                     person["e_mail"],
                     f"Werner: Test – Sie sind Vertrauensperson von {self.name}",
-                    f"Hallo {person['name']},\n\n{self.name} hat Sie als {n}. Vertrauensperson bei Werner "
-                    "eingetragen. Das ist nur ein Test – es ist alles in Ordnung. Bei einem echten Alarm "
-                    "bekommen Sie eine ähnliche E-Mail mit Knöpfen zum Antworten.\n\n"
+                    f"Hallo {person['name']},\n\nDas ist nur ein Test – es ist alles in Ordnung.\n\n"
+                    f"{self.name} hat Sie bei Werner als Vertrauensperson eingetragen. Werner achtet "
+                    f"darauf, ob bei {self.name} zu Hause alles normal ist. Fällt ihm etwas auf, fragt "
+                    f"er zuerst {self.name} selbst. Kommt keine Antwort, schreibt er Ihnen eine E-Mail: "
+                    "was los ist und was Sie tun können. Darin stehen drei Knöpfe: „Ich kümmere mich“, "
+                    "„Fehlalarm“ und „Ich kann gerade nicht“ (dann fragt Werner die nächste Person).\n\n"
+                    "Auf diese Test-E-Mail müssen Sie nicht antworten.\n\n"
                     f"– Werner, das Zuhause von {self.name}",
                 )
             except MailError as err:
@@ -714,8 +796,9 @@ class Bewohner:
         sent = await self._notify(
             person["contact"],
             "Werner (Test)",
-            f"Test von Werner: {self.name} hat Sie als {n}. Vertrauensperson eingetragen. "
-            "Das ist nur ein Test – es ist alles in Ordnung.",
+            f"Test – es ist alles in Ordnung. {self.name} hat Sie als Vertrauensperson eingetragen. "
+            f"Fällt Werner etwas auf und {self.name} antwortet nicht, kommt hier eine Nachricht "
+            "mit drei Knöpfen: Ich kümmere mich · Fehlalarm · Kann gerade nicht.",
         )
         self.log(f"Test-Nachricht an {person['name']}: {'gesendet' if sent else 'fehlgeschlagen'}.")
         if sent:
