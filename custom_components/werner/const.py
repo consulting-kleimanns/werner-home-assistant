@@ -46,6 +46,8 @@ CONF_PRICE_ENTRY = "price_entry"
 CONF_PRICE_MARKUP = "price_markup_ct"
 CONF_PRICE_VAT = "price_vat"
 CONF_PV_FORECAST = "pv_forecast"
+# Von Werner selbst angelegter Forecast.Solar-Eintrag
+CONF_PV_OWN = "pv_own_entry"
 ENERGY_ENTITY_KEYS = (
     CONF_WEATHER,
     CONF_GRID_POWER,
