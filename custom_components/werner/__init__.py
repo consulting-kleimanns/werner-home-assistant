@@ -25,6 +25,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
+from .baseload import Grundverbrauch
 from .bewohner import Bewohner
 from .websocket import async_register_commands
 from .const import (
@@ -137,6 +138,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: WernerConfigEntry) -> bo
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await bewohner.async_start()
     entry.async_on_unload(bewohner.stop)
+    bewohner.grundverbrauch = Grundverbrauch(hass, entry)
+    await bewohner.grundverbrauch.async_start()
+    entry.async_on_unload(bewohner.grundverbrauch.stop)
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     return True
 
@@ -144,6 +148,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: WernerConfigEntry) -> bo
 async def _async_options_updated(hass: HomeAssistant, entry: WernerConfigEntry) -> None:
     """Aktivitätsquellen, Grundlast oder Energie-Sensoren wurden geändert."""
     entry.runtime_data.options_updated()
+    if (gv := getattr(entry.runtime_data, "grundverbrauch", None)) is not None:
+        hass.async_create_background_task(gv.async_update(), "werner_grundverbrauch")
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: WernerConfigEntry) -> bool:
