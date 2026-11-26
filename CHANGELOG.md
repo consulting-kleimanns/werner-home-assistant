@@ -1,5 +1,9 @@
 # Änderungen
 
+## 1.1.1 – 2026-11-26
+
+- Farben von „Mein Zuhause“ und Logo nach dem Erscheinungsbild von effizientes-heim.de: Violett #381D92 für Knöpfe und Auswahl, Lavendel #F2F2FA als Grund, Tinte #0B0620 für Text. Grün und Rot für „in Ordnung“ und „Hilfe“ bleiben.
+
 ## 1.1.0 – 2026-11-26
 
 - **Grundverbrauch statt Zählerstand.** „Mein Zuhause“ › Energie zeigt, was rund um die Uhr läuft – gemessen nachts zwischen 1 und 5 Uhr, nur in Nächten, in denen der Bewohner zu Hause ist (Urlaub zählt nicht).
