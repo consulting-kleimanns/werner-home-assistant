@@ -60,6 +60,7 @@
     const sc = document.querySelector('script[data-dc-script]');
     const props = JSON.parse(sc.getAttribute('data-props') || '{}');
     if (new URLSearchParams(location.search).get('werner') === '1') props.startWerner = true;
+    if (window.DC_PROPS) Object.assign(props, window.DC_PROPS);
     const Component = new Function('DCLogic', sc.textContent + '\n;return Component;')(DCLogic);
     root = document.createElement('div'); root.id = 'dc-root'; document.body.appendChild(root);
     comp = new Component(props); render();
