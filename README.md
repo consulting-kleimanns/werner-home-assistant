@@ -4,7 +4,7 @@
 
 **Werner** ist ein Warnsystem für Home Assistant. Es merkt, wenn es bei einem allein lebenden Menschen ungewöhnlich still ist – oder nachts ungewöhnlich viel passiert. Dann fragt Werner **zuerst den Bewohner selbst**: „Ist alles in Ordnung?“ Erst wenn keine Antwort kommt, informiert Werner nacheinander die Vertrauenspersonen, die der Bewohner selbst ausgewählt hat.
 
-Dazu gehört **Mein Zuhause**: ein Dashboard in einfacher Sprache, mit großen Knöpfen, ohne Fachbegriffe. Optional zeigt es auch Energie (Stromzähler, Balkonkraftwerk, Wallbox über evcc) und gibt Tipps nach der Wettervorhersage.
+Dazu gehört **Mein Zuhause**: ein Dashboard in einfacher Sprache, mit großen Knöpfen, ohne Fachbegriffe. Optional zeigt es auch Energie (Stromzähler, Balkonkraftwerk, Wallbox über evcc) und gibt Tipps nach der Wettervorhersage. Beim **Grundverbrauch** erkennt es an, was schon geschafft ist – und setzt kein neues Ziel mehr, wenn ein sehr gutes Niveau erreicht ist.
 
 > **Werner ist kein Hausnotruf und kein Medizinprodukt.** Er ersetzt keinen Notruf. **Im Notfall: 112.**
 
