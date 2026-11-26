@@ -8,6 +8,15 @@ Dazu gehört **Mein Zuhause**: ein Dashboard in einfacher Sprache, mit großen K
 
 > **Werner ist kein Hausnotruf und kein Medizinprodukt.** Er ersetzt keinen Notruf. **Im Notfall: 112.**
 
+## Werner in Bildern
+
+- **Kurzvorstellung (PDF, 10 Folien):** [docs/praesentation/werner-kurzvorstellung.pdf](docs/praesentation/werner-kurzvorstellung.pdf) – zum Weiterleiten an Interessierte.
+- **Klickdummy (Musterdaten):** so sieht „Mein Zuhause“ auf dem Handy aus und so kommt eine Nachricht von Werner an.
+
+<p align="center"><img src="docs/praesentation/klickdummy-energie.png" alt="Mein Zuhause – Energie und Grundverbrauch" width="280"> &nbsp; <img src="docs/praesentation/klickdummy-nachricht.png" alt="Werner-Nachricht an eine Vertrauensperson" width="280"></p>
+
+Fragen zu Home Assistant oder zur energetischen Beratung: [effizientes-heim.de](https://effizientes-heim.de).
+
 ## Installieren
 
 Sie brauchen [Home Assistant](https://www.home-assistant.io/installation/) und [HACS](https://hacs.xyz/). Fehlt etwas? Die [Anleitung für Helfer](docs/einrichtung/installation.md) erklärt alles Schritt für Schritt.
