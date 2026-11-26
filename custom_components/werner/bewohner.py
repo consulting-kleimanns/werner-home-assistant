@@ -98,6 +98,8 @@ class Bewohner:
         # Ältere Einträge und Einträge vom Helfer gelten als zugestimmt.
         self.consent: bool = bool(entry.data.get(CONF_CONSENT, True))
 
+        # Grundverbrauch (baseload.Grundverbrauch), wird in async_setup_entry gesetzt.
+        self.grundverbrauch: Any = None
         self.settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
         if entry.data.get(CONF_START_ACTIVE) is False:
             self.settings["active"] = False
