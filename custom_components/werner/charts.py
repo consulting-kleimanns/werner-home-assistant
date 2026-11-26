@@ -235,3 +235,13 @@ async def async_charts(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any
     if grid_energy := options.get(CONF_GRID_ENERGY):
         result["use"] = await _use(hass, grid_energy)
     return result
+
+
+async def async_mean_price(hass: HomeAssistant, entry: ConfigEntry) -> float | None:
+    """Mittlerer Strompreis der nächsten Stunden in ct/kWh – für Euro-Angaben."""
+    price_id = _pick(entry.options, CONF_PRICE_ENTRY, price_entries(hass))
+    if not price_id:
+        return None
+    data = await _prices(hass, price_id, entry.options)
+    points = (data or {}).get("points") or []
+    return sum(p["v"] for p in points) / len(points) if points else None
