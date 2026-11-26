@@ -23,6 +23,9 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN_FS = "forecast_solar"
 
 
+TITLE = "Solaranlage (Werner)"
+
+
 class SolarError(Exception):
     """Einrichtung hat nicht geklappt – Text ist für den Bewohner gedacht."""
 
@@ -40,6 +43,20 @@ def _schema_list(result: dict[str, Any]) -> list[dict[str, Any]]:
     schema = result.get("data_schema")
     keys = getattr(schema, "schema", None) or {}
     return [{"name": str(getattr(k, "schema", k))} for k in keys]
+
+
+def _own_entry(hass: HomeAssistant, entry: ConfigEntry) -> ConfigEntry | None:
+    """Der von Werner angelegte Forecast.Solar-Eintrag.
+
+    Fehlt die Zuordnung (z. B. nach einer Neueinrichtung des Bewohners), gilt die
+    eindeutige „Solaranlage (Werner)“ als eigene Anlage.
+    """
+    own = entry.options.get(CONF_PV_OWN)
+    fs = hass.config_entries.async_get_entry(own) if own else None
+    if fs is None:
+        mine = [e for e in hass.config_entries.async_entries(DOMAIN_FS) if e.title == TITLE]
+        fs = mine[0] if len(mine) == 1 else None
+    return fs
 
 
 async def async_set_plane(
@@ -76,7 +93,7 @@ async def async_set_plane(
                 if key := _pick_field(fields, "power"):
                     answer[key] = watt_peak
                 if "name" in names:
-                    answer["name"] = "Solaranlage (Werner)"
+                    answer["name"] = TITLE
             if not answer:
                 raise SolarError("Forecast.Solar fragt etwas, das Werner nicht kennt.")
             result = await flow.async_configure(result["flow_id"], answer)
@@ -91,8 +108,8 @@ async def async_set_plane(
         raise SolarError("Die Einrichtung von Forecast.Solar ist nicht fertig geworden.")
 
     new_entry: ConfigEntry = result["result"]
-    if new_entry.title != "Solaranlage (Werner)":
-        hass.config_entries.async_update_entry(new_entry, title="Solaranlage (Werner)")
+    if new_entry.title != TITLE:
+        hass.config_entries.async_update_entry(new_entry, title=TITLE)
     options = dict(entry.options)
     options[CONF_PV_FORECAST] = new_entry.entry_id
     options[CONF_PV_OWN] = new_entry.entry_id
@@ -103,9 +120,10 @@ async def async_set_plane(
 
 async def async_remove_plane(hass: HomeAssistant, entry: ConfigEntry, keep_option: bool = False) -> None:
     """Den von Werner angelegten Forecast.Solar-Eintrag entfernen."""
-    own = entry.options.get(CONF_PV_OWN)
-    if own and hass.config_entries.async_get_entry(own):
-        await hass.config_entries.async_remove(own)
+    fs = _own_entry(hass, entry)
+    own = fs.entry_id if fs else None
+    if fs is not None:
+        await hass.config_entries.async_remove(fs.entry_id)
     if keep_option:
         return
     options = dict(entry.options)
@@ -118,8 +136,7 @@ async def async_remove_plane(hass: HomeAssistant, entry: ConfigEntry, keep_optio
 
 def plane_of(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any] | None:
     """Angaben der eigenen Anlage (für die Anzeige), soweit lesbar."""
-    own = entry.options.get(CONF_PV_OWN)
-    fs = hass.config_entries.async_get_entry(own) if own else None
+    fs = _own_entry(hass, entry)
     if fs is None:
         return None
     values: dict[str, Any] = {**fs.data, **fs.options}
