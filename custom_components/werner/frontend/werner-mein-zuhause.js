@@ -11,7 +11,7 @@
  * können zwischen den Bewohnern umschalten. Alle Werte kommen aus den Entitäten
  * der Integration; was nicht eingerichtet ist, wird ausgeblendet oder zeigt „–“.
  */
-const WERNER_UI_VERSION = '1.0.0';
+const WERNER_UI_VERSION = '1.1.0';
 
 const C = {
   bg: '#F5F2EA', ink: '#1E2421', muted: '#55605A', line: '#E2DDD1', blue: '#1F4E79', blueBg: '#E6EEF6', blueInk: '#12324F',
@@ -202,6 +202,7 @@ class WernerMeinZuhause extends HTMLElement {
     if (r) {
       this._subscribeForecast(r);
       if (this._ui.tab === 'energie' && (!this._chT || Date.now() - this._chT > 900000 || this._chFor !== r.entity_id)) this._loadCharts(r);
+      if (['energie', 'start'].includes(this._ui.tab) && (!this._gvT || Date.now() - this._gvT > 900000 || this._gvFor !== r.entity_id)) this._loadBase(r);
       if (!this._logT || Date.now() - this._logT > 60000 || this._logFor !== r.entity_id || this._logStatus !== r.state) this._loadLog(r);
     }
     this._render(false);
@@ -427,6 +428,7 @@ class WernerMeinZuhause extends HTMLElement {
     if (e.pv_power) tiles.push(`<button type="button" class="tile" data-tab="energie"><span class="l">Sonne liefert</span><span class="v">${fmtW(this._entNum(e.pv_power))}</span><span class="s">gerade</span></button>`);
     if (e.battery_soc) { const v = this._entNum(e.battery_soc); tiles.push(`<button type="button" class="tile" data-tab="energie"><span class="l">Batterie</span><span class="v">${fmtNum(v, '%')}</span><span class="bar"><span style="width:${v == null ? 0 : Math.max(0, Math.min(100, v))}%"></span></span></button>`); }
     if (e.grid_power) { const v = this._entNum(e.grid_power); tiles.push(`<button type="button" class="tile" data-tab="energie"><span class="l">${v != null && v < 0 ? 'Ins Netz' : 'Aus dem Netz'}</span><span class="v">${fmtW(v == null ? NaN : Math.abs(v))}</span><span class="s">am Zähler</span></button>`); }
+    if (e.grid_energy) tiles.push(this._baseMini(true));
     if (this._hasCar()) { const v = e.vehicle_soc ? this._entNum(e.vehicle_soc) : null; tiles.push(`<button type="button" class="tile" data-tab="auto"><span class="l">${esc(e.vehicle_name || 'Auto')}</span><span class="v">${v == null ? 'Laden' : fmtNum(v, '%')}</span><span class="s" style="color:${C.blue};font-weight:700">Ändern ›</span></button>`); }
     return `<header style="display:flex;flex-direction:column;gap:10px"><div class="date">${esc(now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }))}</div>
 <h1 class="big">${gruss}, ${esc(this._r.attributes.resident)}</h1><button type="button" class="pill ${w.cls === 'err' ? 'red' : w.cls}" data-tab="werner">${esc(w.pill)}</button></header>${emp}
@@ -462,7 +464,7 @@ ${this._log === null ? '<div class="muted">Wird geladen …</div>' : log.length 
     const sel = days[this._ui.day] || days[0]; const tip = sel ? this._tip(sel, best) : null;
     const minis = [];
     if (e.grid_power) minis.push(`<div class="mini"><span class="small">Gerade aus dem Netz</span><span class="v">${fmtW(this._entNum(e.grid_power))}</span></div>`);
-    if (e.grid_energy) minis.push(`<div class="mini"><span class="small">Zählerstand</span><span class="v">${fmtNum(this._entNum(e.grid_energy), 'kWh')}</span></div>`);
+    if (e.grid_energy) minis.push(this._baseMini());
     if (e.pv_power) minis.push(`<div class="mini"><span class="small">Sonne gerade</span><span class="v">${fmtW(this._entNum(e.pv_power))}</span></div>`);
     if (e.battery_soc) minis.push(`<div class="mini"><span class="small">Batterie</span><span class="v">${fmtNum(this._entNum(e.battery_soc), '%')}</span></div>`);
     const kwp = Number(e.pv_kwp) || 0;
@@ -471,6 +473,7 @@ ${this._log === null ? '<div class="muted">Wird geladen …</div>' : log.length 
     if (this._hasCar()) devices.unshift([e.vehicle_name || 'Auto', 'lädt nach Ihrem Lademodus', true]);
     return `<h1>Energie heute</h1>${kwp ? `<div class="muted">Solaranlage mit ${fmtNum(kwp, 'kWp', 1)}.</div>` : ''}
 ${minis.length ? `<div class="grid2">${minis.join('')}</div>` : `<div class="box grey"><div class="txt">Hier können Sie Stromzähler, Solaranlage, Batterie und Auto anzeigen lassen.</div></div>`}
+${e.grid_energy ? this._baseCard() : ''}
 ${this._chartsHtml()}
 <section aria-label="Die nächsten Tage" style="display:flex;flex-direction:column;gap:10px"><div class="t-l">Die nächsten Tage</div>
 ${days.length ? `<div class="days">${days.map((d) => `<button type="button" class="day ${d.good ? 'good' : ''} ${sel && d.i === sel.i ? 'sel' : ''}" data-day="${d.i}" aria-pressed="${sel && d.i === sel.i}"><span style="font-size:16px;font-weight:700">${esc(d.name)}</span><span style="font-size:14px">${esc(d.weather)}</span><span style="font-size:20px;font-weight:700">${d.kwh != null ? fmtNum(d.kwh, 'kWh', 1) : (d.t != null ? fmtNum(d.t, '°C') : '')}</span>${d.kwh != null ? '<span style="font-size:13px">Sonnenstrom</span>' : ''}</button>`).join('')}</div>` : '<div class="muted">Keine Wettervorhersage gefunden.</div>'}
@@ -479,6 +482,108 @@ ${tip ? `<div class="box ${tip.cls || 'grey'}" style="border-radius:16px;padding
 ${devices.map((g) => `<div class="card" style="padding:14px;gap:6px"><div class="between" style="align-items:baseline"><span class="t-m">${esc(g[0])}</span><span class="small">${esc(g[1])}</span></div><div class="txt"><b>Beste Zeit:</b> ${esc(bestTime)}</div><span class="badge ${g[2] ? 'info' : 'grey'}">${g[2] ? 'Steuert evcc automatisch' : 'Tipp – Sie schalten selbst ein'}</span></div>`).join('')}
 </section><div class="small">Sonnenstrom ist eine grobe Schätzung aus der Wettervorhersage.</div>
 <button type="button" class="btn" style="min-height:52px;color:${C.blue}" data-act="energy">Was hier angezeigt wird – ändern</button>`;
+  }
+
+  /* ---------- Grundverbrauch: anerkennen statt antreiben ---------- */
+  async _loadBase(r) {
+    this._gvFor = r.entity_id; this._gvT = Date.now();
+    try { this._gv = await this._h.callWS({ type: 'werner/baseload', entry_id: r.attributes.entry_id }); } catch (err) { this._gv = { error: err.message || String(err) }; }
+    this._gvT = Date.now(); this._render(true);
+  }
+  _baseView() {
+    const g = this._gv; if (!g || g.error || !g.configured) return null;
+    const cur = g.current_w; const euro = (v) => v == null ? '' : `rund ${v.toLocaleString('de-DE')} €`;
+    const W = (v) => `${Math.round(v)} Watt`;
+    const weeks = g.weeks || []; let held = 0;
+    for (let i = weeks.length - 1; i >= 0 && weeks[i].w != null && weeks[i].w <= g.levels[0]; i--) held++;
+    const tips = {
+      high: 'Oft der größte Dauerverbraucher: ein zweiter Kühlschrank, eine Gefriertruhe oder ein Aquarium. Werner zeigt Ihnen den Unterschied am nächsten Morgen.',
+      medium: 'Fernseher, Receiver und Lautsprecher nachts mit einer schaltbaren Steckerleiste ganz ausschalten.',
+      good: 'Ladegeräte, die immer in der Steckdose stecken, herausziehen – und alte Radiowecker oder Lampen mit Netzteil prüfen.'
+    };
+    const v = { cls: 'grey', tone: 'neutral', title: '', text: '', goalLabel: '', goal: '', hint: '', tile: '' };
+    if (cur == null) {
+      v.title = 'Werner misst Ihren Grundverbrauch';
+      v.text = g.nights_valid ? `Bisher ${g.nights_valid} von ${g.nights_needed} Nächten gemessen. Nach einer Woche sehen Sie hier den ersten Wert.` : 'Ab heute Nacht misst Werner, was bei Ihnen rund um die Uhr läuft – nur in Nächten, in denen Sie zu Hause sind. Nach einer Woche sehen Sie hier den ersten Wert.';
+      v.tile = 'wird gemessen';
+      return v;
+    }
+    if (g.rise) {
+      Object.assign(v, { cls: 'warn', tone: 'hint', title: `Zuletzt ${g.rise.by_w} Watt mehr`,
+        text: `Ihr Grundverbrauch ist von ${W(g.rise.from_w)} auf ${W(cur)} gestiegen. Läuft seitdem etwas dauerhaft – ein neues Gerät, ein Heizlüfter, eine Lampe? ${(g.wins || []).length ? 'Ihre Erfolge bleiben Ihnen erhalten.' : ''}`,
+        goalLabel: 'Zurück zu', goal: g.goal_w ? `Etwa ${W(g.goal_w)}` : 'Wie vorher',
+        hint: 'Ist das neue Gerät gewollt, ist das in Ordnung. Bleibt der Wert vier Wochen so, nimmt Werner ihn als neuen Normalfall und fragt nicht weiter.',
+        tile: `${g.rise.by_w} W mehr als zuvor` });
+    } else if (g.done) {
+      Object.assign(v, { cls: 'best', tone: 'best', title: held >= 4 ? `Seit ${held} Wochen sehr gut` : 'Sehr gut – Ziel erreicht',
+        text: `Mit ${W(cur)} sind Sie auf einem sehr guten Niveau. Viel weniger geht kaum: Kühlschrank, Router und Stromzähler brauchen zusammen etwa ${g.floor_w} Watt.${g.saved_eur_year ? ` Gegenüber dem Anfang sparen Sie ${euro(g.saved_eur_year)} im Jahr.` : ''}`,
+        goalLabel: 'Ab jetzt', goal: held >= 4 ? 'Halten genügt' : 'Einfach so weitermachen',
+        hint: 'Werner setzt kein neues Ziel mehr. Er meldet sich nur, wenn der Grundverbrauch merklich steigt.',
+        tile: held >= 4 ? 'sehr gut – gehalten' : 'sehr gut – Ziel erreicht' });
+    } else if ((g.saved_w || 0) >= 5) {
+      Object.assign(v, { cls: 'ok', tone: 'good', title: `Gut gemacht: ${g.saved_w} Watt weniger`,
+        text: `Seit dem Start ist Ihr Grundverbrauch von ${W(g.start_w)} auf ${W(cur)} gesunken.${g.saved_eur_year ? ` Das spart ${euro(g.saved_eur_year)} im Jahr – ganz ohne Verzicht.` : ''}`,
+        goalLabel: 'Nächster Schritt', goal: `Etwa ${W(g.goal_w)}`, hint: tips[g.level] || '',
+        tile: `${g.saved_w} W weniger als am Anfang` });
+    } else {
+      Object.assign(v, { title: g.learning ? 'Werner lernt Ihren Ausgangswert' : `Ihr Grundverbrauch: ${W(cur)}`,
+        text: `Rund um die Uhr laufen bei Ihnen etwa ${W(cur)} – Kühlschrank, Router, Geräte im Bereitschaftsmodus. Das kostet ${euro(g.cost_eur_year)} im Jahr.${g.learning ? ` Noch ${Math.max(0, g.nights_needed - g.nights_valid)} Nächte, dann steht Ihr Ausgangswert fest.` : ''}`,
+        goalLabel: 'Ein kleiner Schritt', goal: `Etwa ${W(g.goal_w)}`, hint: tips[g.level] || '',
+        tile: g.learning ? 'Ausgangswert wird gemessen' : ({ good: 'gut', medium: 'mittel', high: 'hoch' }[g.level] || '') });
+    }
+    return v;
+  }
+  _baseColors(tone) {
+    return { best: ['#2E6B4F', '#2E6B4F', '#FFFFFF'], good: ['#E3F0E8', '#BFD9C9', '#1F4D38'], hint: ['#FBEBD6', '#E8C79B', '#6E3B0B'] }[tone] || ['#FFFFFF', C.line, C.ink];
+  }
+  _baseMini(tile) {
+    const g = this._gv; const v = this._baseView();
+    const val = g && g.current_w != null ? `${Math.round(g.current_w)} W` : '–';
+    const col = v && v.tone === 'best' ? ['#E3F0E8', '#BFD9C9', '#1F4D38'] : this._baseColors(v && v.tone === 'best' ? 'good' : v ? v.tone : '');
+    const st = `background:${col[0]};border:1px solid ${col[1]};color:${col[2]}`;
+    const line = v ? v.tile : (g && g.error ? '' : 'wird geladen …');
+    if (tile) return `<button type="button" class="tile" data-tab="energie" style="${st}"><span class="l">Grundverbrauch</span><span class="v">${esc(val)}</span><span class="s" style="color:inherit;font-weight:700">${esc(line)}</span></button>`;
+    return `<div class="mini" style="${st}"><span class="small">Grundverbrauch</span><span class="v">${esc(val)}</span><span style="font-size:14px;font-weight:700">${esc(line)}</span></div>`;
+  }
+  _baseCard() {
+    const g = this._gv;
+    if (!g) return '';
+    if (g.error) return `<div class="box err"><div class="txt">${esc(g.error)}</div></div>`;
+    const v = this._baseView(); if (!v) return '';
+    const col = this._baseColors(v.tone); const L = g.levels || [60, 100, 150];
+    const names = { very_good: 'sehr gut', good: 'gut', medium: 'mittel', high: 'hoch' };
+    const badgeCol = { very_good: [C.green, '#FFF'], good: ['#CFE6D8', '#1F4D38'], medium: ['#FBEBD6', '#6E3B0B'], high: ['#FBE3E0', '#7A1C15'] }[g.level];
+    const cur = g.current_w;
+    let scale = '';
+    if (cur != null) {
+      const pos = cur <= L[0] ? cur / L[0] * 25 : cur <= L[1] ? 25 + (cur - L[0]) / (L[1] - L[0]) * 25 : cur <= L[2] ? 50 + (cur - L[1]) / (L[2] - L[1]) * 25 : 75 + Math.min(1, (cur - L[2]) / 100) * 25;
+      scale = `<div style="display:flex;flex-direction:column;gap:6px"><div class="small">Wo Sie stehen (Watt, rund um die Uhr)</div>
+<div style="position:relative;height:44px" role="img" aria-label="Grundverbrauch ${Math.round(cur)} Watt, Stufe ${esc(names[g.level] || '')}"><div style="position:absolute;left:0;right:0;top:14px;height:16px;border-radius:8px;overflow:hidden;display:flex"><span style="flex:0 0 25%;background:${C.green}"></span><span style="flex:0 0 25%;background:#8DBFA3"></span><span style="flex:0 0 25%;background:#E8C79B"></span><span style="flex:1 1 auto;background:#D9A39C"></span></div><div style="position:absolute;top:4px;width:8px;height:36px;margin-left:-4px;border-radius:4px;background:${C.ink};left:${Math.min(100, pos).toFixed(1)}%"></div></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));font-size:13px;color:#3E4541"><span>sehr gut<br>bis ${L[0]}</span><span>gut<br>bis ${L[1]}</span><span>mittel<br>bis ${L[2]}</span><span>hoch<br>über ${L[2]}</span></div></div>`;
+    }
+    const weeks = (g.weeks || []).slice(-8); const shown = weeks.filter((w) => w.w != null);
+    let bars = '';
+    if (shown.length >= 2) {
+      const max = Math.max(160, ...shown.map((w) => w.w));
+      const lc = (x) => x <= L[0] ? C.green : x <= L[1] ? '#8DBFA3' : x <= L[2] ? '#D9A85C' : '#C2554B';
+      const lab = (w, i) => i === weeks.length - 1 ? 'diese' : new Date(w.end).toLocaleDateString('de-DE', { day: 'numeric', month: 'numeric' });
+      bars = `<div style="display:flex;flex-direction:column;gap:6px"><div class="small">Die letzten Wochen</div>
+<div style="display:flex;align-items:flex-end;gap:6px;height:112px;border-bottom:2px solid ${C.line}">${weeks.map((w, i) => `<div style="flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:110px">${w.w == null ? '<span style="font-size:12px;color:#55605A">–</span>' : `<span style="font-size:12px;font-weight:700">${w.w}</span><span style="display:block;width:100%;max-width:30px;border-radius:5px 5px 0 0;background:${lc(w.w)};height:${Math.round(w.w / max * 84 + 4)}px${i === weeks.length - 1 ? `;outline:2px solid ${C.ink};outline-offset:1px` : ''}"></span>`}</div>`).join('')}</div>
+<div style="display:flex;gap:6px">${weeks.map((w, i) => `<span style="flex:1 1 0;text-align:center;font-size:12px;color:${C.muted}">${esc(lab(w, i))}</span>`).join('')}</div></div>`;
+    }
+    const winNames = { minus_10: 'Erstmals 10 Watt weniger', good: 'Stufe „gut“ erreicht', very_good: 'Stufe „sehr gut“ erreicht', held_4: '4 Wochen sehr gut gehalten', held_12: '3 Monate sehr gut gehalten' };
+    const wins = (g.wins || []).filter((w) => winNames[w.key]);
+    const check = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>';
+    const winsHtml = wins.length ? wins.map((w) => `<div style="display:flex;align-items:center;gap:12px;background:${C.bg};border-radius:14px;padding:10px 12px"><span style="width:32px;height:32px;flex-shrink:0;border-radius:16px;background:${C.green};color:#FFF;display:flex;align-items:center;justify-content:center">${check}</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:700">${esc(winNames[w.key])}</span><span style="font-size:14px;color:${C.muted}">${esc(new Date(w.date).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' }))}</span></span></div>`).join('')
+      : `<div class="small">Noch keine – ${g.learning ? 'zuerst misst Werner Ihren Ausgangswert.' : 'der erste kommt mit 10 Watt weniger.'}</div>`;
+    const goal = v.goal ? `<div style="border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;${v.tone === 'best' ? 'background:#E3F0E8;color:#1F4D38' : `background:${C.bg};color:${C.ink}`}"><div class="small" style="color:inherit">${esc(v.goalLabel)}</div><div style="font-size:18px;font-weight:700;line-height:1.3">${esc(v.goal)}</div>${v.hint ? `<div style="font-size:15px;line-height:1.4">${esc(v.hint)}</div>` : ''}</div>` : '';
+    return `<section class="card" aria-label="Ihr Grundverbrauch" style="gap:12px">
+<div class="between" style="align-items:baseline"><span class="t-l">Ihr Grundverbrauch</span>${badgeCol ? `<span class="badge" style="font-size:15px;background:${badgeCol[0]};color:${badgeCol[1]}">${esc(names[g.level])}</span>` : ''}</div>
+<div style="border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;background:${col[0]};border:1px solid ${col[1]};color:${col[2]}"><div style="font-size:19px;font-weight:700;line-height:1.25">${esc(v.title)}</div><div class="txt">${esc(v.text)}</div></div>
+${scale}${bars}${goal}
+<div style="display:flex;flex-direction:column;gap:8px"><div class="t-m">Ihre Erfolge</div>${winsHtml}</div>
+<div class="small">Gemessen wird der übliche Verbrauch nachts zwischen 1 und 5 Uhr – nur in Nächten, in denen Sie zu Hause sind. Urlaub zählt nicht.${g.price_assumed ? ` Euro-Beträge mit ${fmtNum(g.price_ct, 'ct', 0)} je kWh gerechnet.` : ''}</div>
+</section>`;
   }
 
   /* ---------- Diagramme (Strompreis, Sonne, Verbrauch) ---------- */
@@ -861,7 +966,7 @@ ${li('Sie bestimmen alles selbst: <b>wer</b>, <b>wie</b> und <b>wann</b>. Das st
     else {
       const optLabel = (o) => [o.name, o.area, fmtState(this._h.states[o.entity_id])].filter(Boolean).join(' · ');
       const sel = (key, label) => { const opts = e.candidates[key] || []; const cur = e.current[key] || ''; const now = cur ? fmtState(this._h.states[cur]) : ''; return `<label class="f">${label}<select data-f="en_${key}"><option value="">– nicht zeigen –</option>${opts.map((o) => `<option value="${esc(o.entity_id)}" ${cur === o.entity_id ? 'selected' : ''}>${esc(optLabel(o))}</option>`).join('')}${cur && !opts.some((o) => o.entity_id === cur) ? `<option value="${esc(cur)}" selected>${esc(cur)}</option>` : ''}</select>${cur ? `<span class="small" style="font-weight:400">Gerade: ${esc(now)}</span>` : ''}</label>`; };
-      inner += sel('weather', 'Wettervorhersage') + sel('grid_power', 'Strom aus dem Netz (gerade)') + sel('grid_energy', 'Zählerstand') + sel('pv_power', 'Sonnenstrom (gerade)')
+      inner += sel('weather', 'Wettervorhersage') + sel('grid_power', 'Strom aus dem Netz (gerade)') + sel('grid_energy', 'Zählerstand (für Verbrauch und Grundverbrauch)') + sel('pv_power', 'Sonnenstrom (gerade)')
         + (e.plane ? '' : `<label class="f">Größe der Solaranlage in kWp (für die Sonnen-Schätzung)<input type="number" inputmode="decimal" step="0.1" min="0" data-f="en_pv_kwp" value="${esc(e.current.pv_kwp || '')}" placeholder="z. B. 1,5"></label>`)
         + this._srcSel('price_entry', 'Strompreis (Diagramm)', e.price_entries || [], 'Nord Pool')
         + `<label class="f" style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" data-f="en_price_vat" ${e.current.price_vat !== false ? 'checked' : ''} style="width:24px;height:24px"> Mit Mehrwertsteuer (19 %)</label>`
