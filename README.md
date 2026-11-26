@@ -11,7 +11,7 @@ Dazu gehört **Mein Zuhause**: ein Dashboard in einfacher Sprache, mit großen K
 ## Werner in Bildern
 
 - **Kurzvorstellung (PDF, 10 Folien):** [docs/praesentation/werner-kurzvorstellung.pdf](docs/praesentation/werner-kurzvorstellung.pdf) – zum Weiterleiten an Interessierte.
-- **Klickdummy (Musterdaten):** so sieht „Mein Zuhause“ auf dem Handy aus und so kommt eine Nachricht von Werner an.
+- **Klickdummy zum Durchklicken (Musterdaten):** [im Browser öffnen](https://raw.githack.com/consulting-kleimanns/werner-home-assistant/main/docs/klickdummy/index.html) – mit und ohne Werner, inklusive „Werner einstellen“ und der Nachricht an eine Vertrauensperson. Die Dateien liegen unter [docs/klickdummy](docs/klickdummy) und laufen auch lokal: `index.html` im Browser öffnen.
 
 <p align="center"><img src="docs/praesentation/klickdummy-energie.png" alt="Mein Zuhause – Energie und Grundverbrauch" width="280"> &nbsp; <img src="docs/praesentation/klickdummy-nachricht.png" alt="Werner-Nachricht an eine Vertrauensperson" width="280"></p>
 

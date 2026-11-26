@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Erikas Handy – Mein Zuhause</title>
+<script src="dc.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#381D92}a:hover{color:#24105F}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F2F2FA; color: #0B0620; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; display: flex; flex-direction: column; position: relative; overflow: hidden">
+
+<main style="flex-grow: 1; min-height: 0; overflow-y: auto; box-sizing: border-box; padding: 52px 18px 20px; display: flex; flex-direction: column; gap: 14px">
+
+<sc-if value="{{isHome}}" hint-placeholder-val="{{ false }}">
+<header style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 17px; color: #5B5670">Donnerstag, 26. November</div>
+<h1 style="margin: 0; font-size: 30px; line-height: 1.15">Guten Morgen, Erika</h1>
+<button type="button" onClick="{{goWerner}}" style="{{wernerPill}}">{{wernerPillText}}</button>
+</header>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<button type="button" onClick="{{goEnergie}}" style="text-align: left; background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; color: #0B0620; min-height: 120px">
+<span style="font-size: 15px; color: #5B5670">Gerade aus dem Netz</span>
+<span style="font-size: 32px; font-weight: 700">91 W</span>
+<span style="font-size: 15px; color: #5B5670">Strompreis jetzt 30 ct</span>
+</button>
+<button type="button" onClick="{{goEnergie}}" style="{{baseTileStyle}}">
+<span style="font-size: 15px; color: #5B5670">Grundverbrauch</span>
+<span style="font-size: 32px; font-weight: 700">{{base.now}} W</span>
+<span style="font-size: 15px; font-weight: 700">{{base.tileLine}}</span>
+</button>
+<button type="button" onClick="{{goEnergie}}" style="text-align: left; background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; color: #0B0620; min-height: 120px">
+<span style="font-size: 15px; color: #5B5670">Sonne heute</span>
+<span style="font-size: 32px; font-weight: 700">1,5 kWh</span>
+<span style="font-size: 15px; color: #5B5670">am meisten um 13 Uhr</span>
+</button>
+<button type="button" onClick="{{goAuto}}" style="text-align: left; background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; color: #0B0620; min-height: 120px">
+<span style="font-size: 15px; color: #5B5670">VW ID.3</span>
+<span style="font-size: 32px; font-weight: 700">54 %</span>
+<span style="font-size: 15px; line-height: 1.2">{{autoShort}}</span>
+</button>
+</div>
+<button type="button" onClick="{{openDemo}}" style="margin-top: 4px; min-height: 48px; border-radius: 14px; border: 1px dashed #8C88A6; background: transparent; color: #5B5670; font-size: 15px; cursor: pointer">Werner testen (nur Vorführung)</button>
+</sc-if>
+
+<sc-if value="{{isEnergie}}" hint-placeholder-val="{{ true }}">
+<h1 style="margin: 0; font-size: 28px">Energie heute</h1>
+<div style="font-size: 16px; color: #5B5670; line-height: 1.4">Solaranlage mit 1,5 kWp. Strompreis von der Börse (Nord Pool) mit Mehrwertsteuer.</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<div style="background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 15px; color: #5B5670">Gerade aus dem Netz</span><span style="font-size: 26px; font-weight: 700">91 W</span></div>
+<div style="{{baseMiniStyle}}"><span style="font-size: 15px; color: #5B5670">Grundverbrauch</span><span style="font-size: 26px; font-weight: 700">{{base.now}} W</span><span style="font-size: 14px; font-weight: 700">{{base.tileLine}}</span></div>
+</div>
+
+<section aria-label="Ihr Grundverbrauch" style="background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px">
+<span style="font-size: 20px; font-weight: 700">Ihr Grundverbrauch</span>
+<span style="{{base.levelBadge}}">{{base.levelName}}</span>
+</div>
+<div style="{{base.msgStyle}}">
+<div style="font-size: 19px; font-weight: 700; line-height: 1.25">{{base.msgTitle}}</div>
+<div style="font-size: 16px; line-height: 1.4">{{base.msgText}}</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 15px; color: #5B5670">Wo Sie stehen (Watt, Tag und Nacht)</div>
+<div style="position: relative; height: 44px">
+<div style="position: absolute; left: 0; right: 0; top: 14px; height: 16px; border-radius: 8px; overflow: hidden; display: flex">
+<span style="flex-grow: 0; flex-basis: 25%; background: #2E6B4F"></span>
+<span style="flex-grow: 0; flex-basis: 25%; background: #8DBFA3"></span>
+<span style="flex-grow: 0; flex-basis: 25%; background: #E8C79B"></span>
+<span style="flex-grow: 1; background: #D9A39C"></span>
+</div>
+<div style="{{base.markerStyle}}"></div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); font-size: 13px; color: #3B3654">
+<span>sehr gut<br>bis 60</span><span>gut<br>bis 100</span><span>mittel<br>bis 150</span><span>hoch<br>über 150</span>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 15px; color: #5B5670">Die letzten Wochen</div>
+<div style="display: flex; align-items: flex-end; gap: 6px; height: 110px; border-bottom: 2px solid #DCD9EE">
+<sc-for list="{{base.weeks}}" as="w" hint-placeholder-count="8">
+<div style="flex-grow: 1; flex-basis: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; height: 108px">
+<span style="font-size: 12px; font-weight: 700">{{w.v}}</span>
+<span style="{{w.style}}"></span>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; gap: 6px">
+<sc-for list="{{base.weeks}}" as="w" hint-placeholder-count="8">
+<span style="flex-grow: 1; flex-basis: 0; text-align: center; font-size: 12px; color: #5B5670">{{w.label}}</span>
+</sc-for>
+</div>
+</div>
+
+<div style="{{base.goalStyle}}">
+<div style="font-size: 15px; color: #5B5670">{{base.goalLabel}}</div>
+<div style="font-size: 18px; font-weight: 700; line-height: 1.3">{{base.goal}}</div>
+<div style="font-size: 15px; line-height: 1.4">{{base.goalHint}}</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="font-size: 17px; font-weight: 700">Ihre Erfolge</div>
+<sc-for list="{{base.wins}}" as="b" hint-placeholder-count="3">
+<div style="{{b.style}}">
+<span style="{{b.dotStyle}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 16px; font-weight: 700">{{b.title}}</span>
+<span style="font-size: 14px; color: #5B5670">{{b.when}}</span>
+</span>
+</div>
+</sc-for>
+<sc-if value="{{base.noWins}}" hint-placeholder-val="{{ false }}">
+<div style="font-size: 15px; color: #5B5670; line-height: 1.4">Noch keine – die ersten vier Wochen misst Werner Ihren Ausgangswert.</div>
+</sc-if>
+</div>
+<div style="font-size: 14px; color: #5B5670; line-height: 1.4">Gemessen wird der niedrigste übliche Verbrauch nachts zwischen 1 und 5 Uhr – nur in Nächten, in denen Ihr iPhone zu Hause ist. Urlaub zählt nicht.</div>
+<button type="button" onClick="{{openBaseDemo}}" style="min-height: 48px; border-radius: 14px; border: 1px dashed #8C88A6; background: transparent; color: #5B5670; font-size: 15px; cursor: pointer">Verlauf vorführen (Beispiele)</button>
+</section>
+
+<div style="font-size: 20px; font-weight: 700; margin-top: 4px">Strom heute und morgen</div>
+<section aria-label="Strompreis" style="background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 18px; font-weight: 700">Strompreis</span><span style="font-size: 22px; font-weight: 700">30 ct</span></div>
+<div style="font-size: 16px; line-height: 1.4">Am günstigsten: <b>heute 23 Uhr</b> (24 ct). Am teuersten: heute 17 Uhr (39 ct).</div>
+<div style="position: relative; display: flex; align-items: flex-end; gap: 2px; height: 110px; border-bottom: 2px solid #DCD9EE">
+<sc-for list="{{priceBars}}" as="p" hint-placeholder-count="30">
+<span style="{{p.style}}"></span>
+</sc-for>
+<span style="position: absolute; left: 20%; top: 0; bottom: 0; border-left: 2px dashed #0B0620"></span>
+<span style="position: absolute; left: calc(20% + 4px); top: -2px; font-size: 12px; font-weight: 700">jetzt</span>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 12px; color: #5B5670"><span>2 Uhr</span><span>8 Uhr</span><span>14 Uhr</span><span>20 Uhr</span><span>morgen 2 Uhr</span></div>
+<div style="display: flex; gap: 14px; font-size: 14px; color: #3B3654"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #2E6B4F"></span>günstig</span><span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #8C88A6"></span>mittel</span><span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #A3261D"></span>teuer</span></div>
+<div style="font-size: 14px; color: #5B5670">Börsenpreis inkl. Mehrwertsteuer in Cent je kWh. Preise für morgen kommen gegen 13 Uhr.</div>
+</section>
+
+<section aria-label="Sonnenstrom" style="background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+<div style="font-size: 18px; font-weight: 700">Sonnenstrom – Vorhersage</div>
+<div style="font-size: 16px; line-height: 1.4">Heute noch etwa <b>1,5 kWh</b>, morgen etwa 1,4 kWh. Am meisten Sonne: heute 13 Uhr.</div>
+<div style="display: flex; align-items: flex-end; gap: 4px; height: 100px; border-bottom: 2px solid #DCD9EE">
+<sc-for list="{{sunBars}}" as="b" hint-placeholder-count="12">
+<span style="{{b.style}}"></span>
+</sc-for>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 12px; color: #5B5670"><span>7 Uhr</span><span>12 Uhr</span><span>18 Uhr</span></div>
+</section>
+
+<section aria-label="Stromverbrauch" style="background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+<div style="font-size: 18px; font-weight: 700">Stromverbrauch der Wohnung</div>
+<div style="font-size: 16px; line-height: 1.4">Heute bisher <b>0,6 kWh</b>. Bis 14 Uhr kommen etwa 0,9 kWh dazu.</div>
+<div style="position: relative; display: flex; align-items: flex-end; gap: 3px; height: 100px; border-bottom: 2px solid #DCD9EE">
+<sc-for list="{{useBars}}" as="b" hint-placeholder-count="18">
+<span style="{{b.style}}"></span>
+</sc-for>
+<span style="position: absolute; left: 66.6%; top: 0; bottom: 0; border-left: 2px dashed #0B0620"></span>
+<span style="position: absolute; left: calc(66.6% + 4px); top: -2px; font-size: 12px; font-weight: 700">jetzt</span>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 12px; color: #5B5670"><span>20 Uhr</span><span>2 Uhr</span><span>8 Uhr</span><span>14 Uhr</span></div>
+<div style="display: flex; gap: 14px; font-size: 14px; color: #3B3654"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #381D92"></span>gemessen</span><span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #A9BFD4"></span>erwartet</span></div>
+</section>
+
+<section aria-label="Die nächsten Tage" style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 20px; font-weight: 700">Die nächsten Tage</div>
+<div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px">
+<sc-for list="{{days}}" as="d" hint-placeholder-count="4">
+<button type="button" onClick="{{d.pick}}" aria-pressed="{{d.selected}}" style="{{d.style}}">
+<span style="font-size: 16px; font-weight: 700">{{d.name}}</span>
+<span style="font-size: 14px">{{d.weather}}</span>
+<span style="font-size: 22px; font-weight: 700">{{d.kwh}}</span>
+<span style="font-size: 13px">Sonnenstrom</span>
+</button>
+</sc-for>
+</div>
+<div style="{{dayTipStyle}}">
+<div style="font-size: 18px; font-weight: 700">{{dayTipTitle}}</div>
+<div style="font-size: 16px; line-height: 1.4">{{dayTipText}}</div>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{isAuto}}" hint-placeholder-val="{{ false }}">
+<h1 style="margin: 0; font-size: 28px">VW ID.3 laden</h1>
+<div style="background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; color: #5B5670">Akku</span><span style="font-size: 30px; font-weight: 700">54 %</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; color: #5B5670">Reicht für ca.</span><span style="font-size: 30px; font-weight: 700">210 km</span></div>
+</div>
+<span style="display: block; height: 12px; border-radius: 6px; background: #E1DEF0; overflow: hidden"><span style="display: block; width: 54%; height: 12px; background: #381D92"></span></span>
+<div style="font-size: 15px; color: #5B5670">Angesteckt · {{autoShort}}</div>
+</div>
+<div style="font-size: 16px; color: #5B5670">So lädt die Wallbox:</div>
+<div role="radiogroup" aria-label="Lademodus" style="display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{modes}}" as="m" hint-placeholder-count="4">
+<button type="button" role="radio" aria-checked="{{m.checked}}" onClick="{{m.pick}}" style="{{m.style}}">
+<span style="font-size: 20px; font-weight: 700">{{m.title}}</span>
+<span style="font-size: 15px; line-height: 1.35">{{m.text}}</span>
+</button>
+</sc-for>
+</div>
+<div style="font-size: 15px; color: #5B5670; line-height: 1.4">evcc plant das Laden mit Sonnen-Vorhersage und Börsenpreis. Fehlt Sonnenstrom, lädt evcc zur günstigsten Stunde aus dem Netz nach.</div>
+</sc-if>
+
+<sc-if value="{{isWerner}}" hint-placeholder-val="{{ false }}">
+<h1 style="margin: 0; font-size: 28px">Werner passt auf</h1>
+<section aria-label="Status" style="{{wernerBox}}">
+<div style="font-size: 22px; font-weight: 700; line-height: 1.25">{{wernerTitle}}</div>
+<div style="font-size: 16px; line-height: 1.4">{{wernerText}}</div>
+</section>
+<section aria-label="Heute bemerkt" style="background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 18px; font-weight: 700">Heute bemerkt</div>
+<sc-for list="{{log}}" as="e" hint-placeholder-count="5">
+<div style="display: flex; gap: 12px; font-size: 16px; align-items: baseline"><span style="width: 48px; flex-shrink: 0; font-weight: 700">{{e.t}}</span><span>{{e.text}}</span></div>
+</sc-for>
+</section>
+<div style="font-size: 15px; color: #5B5670; line-height: 1.4">Werner achtet auf den Stromverbrauch im Haus und darauf, ob Ihr iPhone zu Hause ist. Kamera und Mikrofon nur, wenn Sie das ausdrücklich erlauben.</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<button type="button" onClick="{{togglePause}}" style="{{pauseBtn}}">{{pauseLabel}}</button>
+<button type="button" onClick="{{openCheck}}" style="min-height: 60px; border-radius: 16px; border: none; background: #A3261D; color: #FFFFFF; font-size: 20px; font-weight: 700; cursor: pointer">Ich brauche Hilfe</button>
+</div>
+</sc-if>
+
+<sc-if value="{{isPersonen}}" hint-placeholder-val="{{ false }}">
+<h1 style="margin: 0; font-size: 28px">Einstellen</h1>
+
+<sc-if value="{{wernerOff}}" hint-placeholder-val="{{ false }}">
+<section aria-label="Werner" style="background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 14px">
+<div style="flex-grow: 1; font-size: 20px; font-weight: 700">Werner – Ihr Aufpasser</div>
+<button type="button" role="switch" aria-checked="false" aria-label="Werner einschalten" onClick="{{wernerOn}}" style="width: 64px; height: 36px; flex-shrink: 0; border-radius: 18px; border: 2px solid #BDB8D6; background: #ECEBF5; cursor: pointer; position: relative; padding: 0"><span style="position: absolute; top: 2px; left: 2px; width: 28px; height: 28px; border-radius: 14px; background: #8C88A6"></span></button>
+</div>
+<div style="font-size: 16px; line-height: 1.4">Werner ist ausgeschaltet. Wenn Sie möchten, achtet er darauf, ob bei Ihnen zu Hause alles normal ist.</div>
+<ul style="margin: 0; padding-left: 22px; font-size: 16px; line-height: 1.5; display: flex; flex-direction: column; gap: 4px">
+<li>Fällt ihm etwas auf, fragt er <b>zuerst Sie</b>: „Ist alles in Ordnung?“</li>
+<li>Nur wenn Sie nicht antworten, informiert er Menschen, die <b>Sie selbst</b> auswählen.</li>
+<li>Sie können Werner jederzeit pausieren oder wieder ausschalten.</li>
+</ul>
+<div style="font-size: 14px; color: #5B5670">Werner ist kein Hausnotruf. Im Notfall: 112.</div>
+<button type="button" onClick="{{wernerOn}}" style="min-height: 64px; border-radius: 16px; border: none; background: #2E6B4F; color: #FFFFFF; font-size: 20px; font-weight: 700; cursor: pointer">Werner einschalten</button>
+</section>
+<div style="font-size: 15px; color: #5B5670; line-height: 1.4">Energie, Strompreis und Ihre Solaranlage stellen Sie unter „Energie“ ein.</div>
+</sc-if>
+
+<sc-if value="{{wernerIsOn}}" hint-placeholder-val="{{ false }}">
+<section aria-label="Werner" style="background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 16px; display: flex; align-items: center; gap: 14px">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: 20px; font-weight: 700">Werner einstellen</div>
+<div style="font-size: 15px; color: #5B5670; line-height: 1.4">{{wernerStateLine}}</div>
+</div>
+<button type="button" role="switch" aria-checked="true" aria-label="Werner ausschalten" onClick="{{askOff}}" style="width: 64px; height: 36px; flex-shrink: 0; border-radius: 18px; border: none; background: #2E6B4F; cursor: pointer; position: relative; padding: 0"><span style="position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 14px; background: #FFFFFF"></span></button>
+</section>
+<div style="font-size: 16px; color: #5B5670; line-height: 1.4">Sie bestimmen, wer wie und wann informiert wird. Niemand sonst kann das ändern.</div>
+<div role="tablist" aria-label="Bereiche" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; background: #E4E1F2; border-radius: 16px; padding: 5px">
+<sc-for list="{{subtabs}}" as="st" hint-placeholder-count="3">
+<button type="button" role="tab" aria-selected="{{st.selected}}" onClick="{{st.pick}}" style="{{st.style}}">{{st.label}}</button>
+</sc-for>
+</div>
+
+<sc-if value="{{subWer}}" hint-placeholder-val="{{ true }}">
+<div style="font-size: 16px; line-height: 1.4">Zuerst fragt Werner <b>immer Sie selbst</b> auf dem iPhone. Antworten Sie nicht, informiert er nacheinander:</div>
+<sc-for list="{{people}}" as="p" hint-placeholder-count="2">
+<div style="background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 38px; height: 38px; flex-shrink: 0; border-radius: 19px; background: #381D92; color: #FFFFFF; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{p.nr}}</span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 19px; font-weight: 700">{{p.name}}</span>
+<span style="font-size: 15px; color: #5B5670">{{p.summary}}</span>
+</span>
+</div>
+<div style="font-size: 15px; color: #5B5670">So erreicht Werner diese Person:</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{p.ways}}" as="c" hint-placeholder-count="4">
+<button type="button" aria-pressed="{{c.on}}" onClick="{{c.pick}}" style="{{c.style}}">{{c.label}}</button>
+</sc-for>
+</div>
+<div style="display: flex; gap: 8px; justify-content: flex-end">
+<button type="button" onClick="{{p.test}}" style="min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid #381D92; background: #FFFFFF; color: #381D92; font-size: 15px; font-weight: 700; cursor: pointer">{{p.testLabel}}</button>
+<button type="button" aria-label="Weiter nach oben" onClick="{{p.up}}" style="width: 48px; height: 48px; border-radius: 12px; border: 1px solid #DCD9EE; background: #FFFFFF; color: #0B0620; font-size: 20px; cursor: pointer">↑</button>
+<button type="button" aria-label="Weiter nach unten" onClick="{{p.down}}" style="width: 48px; height: 48px; border-radius: 12px; border: 1px solid #DCD9EE; background: #FFFFFF; color: #0B0620; font-size: 20px; cursor: pointer">↓</button>
+</div>
+</div>
+</sc-for>
+<button type="button" onClick="{{showExample}}" style="min-height: 52px; border-radius: 14px; border: 1px solid #DCD9EE; background: #FFFFFF; color: #381D92; font-size: 16px; font-weight: 700; cursor: pointer">So sieht die Nachricht aus</button>
+<div style="font-size: 15px; color: #5B5670; line-height: 1.4">Die Personen brauchen keine eigene App. Sie sehen nur die Meldung und die Uhrzeit – nicht Ihren Tagesablauf.</div>
+</sc-if>
+
+<sc-if value="{{subWann}}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{rules}}" as="r" hint-placeholder-count="3">
+<div style="background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+<span style="font-size: 18px; font-weight: 700; line-height: 1.25">{{r.title}}</span>
+<button type="button" role="switch" aria-checked="{{r.on}}" aria-label="{{r.title}}" onClick="{{r.toggle}}" style="{{r.switchStyle}}"><span style="{{r.knobStyle}}"></span></button>
+</div>
+<div style="font-size: 16px; line-height: 1.4">{{r.text}}</div>
+<div style="display: flex; align-items: center; gap: 10px">
+<button type="button" aria-label="Weniger" onClick="{{r.minus}}" style="width: 52px; height: 52px; border-radius: 14px; border: 1px solid #DCD9EE; background: #FFFFFF; color: #0B0620; font-size: 24px; cursor: pointer">–</button>
+<span style="flex-grow: 1; text-align: center; font-size: 20px; font-weight: 700">{{r.value}}</span>
+<button type="button" aria-label="Mehr" onClick="{{r.plus}}" style="width: 52px; height: 52px; border-radius: 14px; border: 1px solid #DCD9EE; background: #FFFFFF; color: #0B0620; font-size: 24px; cursor: pointer">+</button>
+</div>
+</div>
+</sc-for>
+<div style="font-size: 15px; color: #5B5670; line-height: 1.4">Ist Ihr iPhone unterwegs oder Werner pausiert, gelten diese Regeln nicht.</div>
+</sc-if>
+
+<sc-if value="{{subSensoren}}" hint-placeholder-val="{{ false }}">
+<div style="font-size: 16px; line-height: 1.4">Woran Werner Ihren Tag erkennt. Sie können jedes Signal ausschalten.</div>
+<sc-for list="{{sensors}}" as="x" hint-placeholder-count="4">
+<div style="background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+<span style="font-size: 18px; font-weight: 700">{{x.title}}</span>
+<button type="button" role="switch" aria-checked="{{x.on}}" aria-label="{{x.title}}" onClick="{{x.toggle}}" style="{{x.switchStyle}}"><span style="{{x.knobStyle}}"></span></button>
+</div>
+<div style="font-size: 15px; line-height: 1.4; color: #3B3654">{{x.text}}</div>
+<span style="{{x.badgeStyle}}">{{x.badge}}</span>
+</div>
+</sc-for>
+</sc-if>
+
+<section aria-label="Werner ausschalten" style="background: #FFFFFF; border: 1px solid #DCD9EE; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+<div style="font-size: 18px; font-weight: 700">Werner ausschalten</div>
+<div style="font-size: 15px; color: #5B5670; line-height: 1.4">Werner fragt dann nicht mehr nach und benachrichtigt niemanden. Ihre Einstellungen bleiben gespeichert.</div>
+<button type="button" onClick="{{askOff}}" style="min-height: 52px; border-radius: 14px; border: 1px solid #BDB8D6; background: #FFFFFF; color: #0B0620; font-size: 16px; font-weight: 700; cursor: pointer">Werner ausschalten</button>
+</section>
+</sc-if>
+</sc-if>
+
+</main>
+
+<nav aria-label="Reiter" style="{{navStyle}}">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+<button type="button" onClick="{{t.pick}}" aria-current="{{t.current}}" style="{{t.style}}">
+<sc-if value="{{t.isStart}}" hint-placeholder-val="{{ false }}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"></path><path d="M5 10v10h14V10"></path></svg></sc-if>
+<sc-if value="{{t.isWerner}}" hint-placeholder-val="{{ false }}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg></sc-if>
+<sc-if value="{{t.isEnergie}}" hint-placeholder-val="{{ false }}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></sc-if>
+<sc-if value="{{t.isAuto}}" hint-placeholder-val="{{ false }}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 16l1.5-5h11l1.5 5"></path><rect x="3" y="16" width="18" height="4" rx="1"></rect><path d="M7 20v1M17 20v1"></path></svg></sc-if>
+<sc-if value="{{t.isPersonen}}" hint-placeholder-val="{{ false }}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M16 14.2c2.8.4 5 2.8 5 5.8"></path></svg></sc-if>
+<span style="font-size: 13px; line-height: 1.1">{{t.label}}</span>
+</button>
+</sc-for>
+</nav>
+
+<sc-if value="{{showDemo}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(30, 36, 33, 0.45); display: flex; align-items: flex-end">
+<div role="dialog" aria-label="Werner testen" style="width: 100%; box-sizing: border-box; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 22px 18px 34px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 21px; font-weight: 700">Werner testen (Vorführung)</div>
+<button type="button" onClick="{{simRuhig}}" style="min-height: 60px; border-radius: 14px; border: 1px solid #DCD9EE; background: #FBEBD6; color: #6E3B0B; font-size: 16px; font-weight: 700; cursor: pointer; text-align: left; padding: 0 16px">Ungewöhnlich ruhig: iPhone zu Hause, 3 Std. nur Grundlast</button>
+<button type="button" onClick="{{simAktiv}}" style="min-height: 60px; border-radius: 14px; border: 1px solid #DCD9EE; background: #FBEBD6; color: #6E3B0B; font-size: 16px; font-weight: 700; cursor: pointer; text-align: left; padding: 0 16px">Ungewöhnlich aktiv: nachts um 3 Uhr Herd an</button>
+<button type="button" onClick="{{reset}}" style="min-height: 52px; border-radius: 14px; border: 1px solid #DCD9EE; background: #FFFFFF; color: #0B0620; font-size: 16px; cursor: pointer">Alles zurücksetzen</button>
+<button type="button" onClick="{{closeDemo}}" style="min-height: 52px; border-radius: 14px; border: none; background: #381D92; color: #FFFFFF; font-size: 17px; font-weight: 700; cursor: pointer">Schließen</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showBaseDemo}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(30, 36, 33, 0.45); display: flex; align-items: flex-end">
+<div role="dialog" aria-label="Grundverbrauch vorführen" style="width: 100%; box-sizing: border-box; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 22px 18px 34px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 21px; font-weight: 700">Grundverbrauch – Beispiele</div>
+<sc-for list="{{baseScenarios}}" as="b" hint-placeholder-count="5">
+<button type="button" aria-pressed="{{b.selected}}" onClick="{{b.pick}}" style="{{b.style}}">{{b.label}}</button>
+</sc-for>
+<button type="button" onClick="{{closeBaseDemo}}" style="min-height: 52px; border-radius: 14px; border: none; background: #381D92; color: #FFFFFF; font-size: 17px; font-weight: 700; cursor: pointer">Schließen</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showOff}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(30, 36, 33, 0.45); display: flex; align-items: flex-end">
+<div role="dialog" aria-label="Werner ausschalten" style="width: 100%; box-sizing: border-box; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 22px 18px 34px; display: flex; flex-direction: column; gap: 12px">
+<div style="font-size: 26px; font-weight: 700; line-height: 1.2">Werner ausschalten?</div>
+<div style="font-size: 17px; line-height: 1.45">Werner fragt dann nicht mehr nach und benachrichtigt niemanden – auch nicht, wenn etwas ungewöhnlich ist. Ihre Einstellungen bleiben gespeichert.</div>
+<button type="button" onClick="{{cancelOff}}" style="min-height: 60px; border-radius: 16px; border: 1px solid #DCD9EE; background: #FFFFFF; color: #0B0620; font-size: 18px; cursor: pointer">Nein, eingeschaltet lassen</button>
+<button type="button" onClick="{{confirmOff}}" style="min-height: 60px; border-radius: 16px; border: none; background: #A3261D; color: #FFFFFF; font-size: 18px; font-weight: 700; cursor: pointer">Ja, ausschalten</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showMsg}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(30, 36, 33, 0.45); display: flex; align-items: flex-end">
+<div role="dialog" aria-label="Beispiel-Nachricht" style="width: 100%; max-height: 92%; overflow-y: auto; box-sizing: border-box; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 22px 18px 34px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 15px; color: #5B5670">So bekommt {{msgName}} die Nachricht</div>
+<div style="background: #F2F2FA; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+<div style="font-size: 18px; font-weight: 700; color: #6E3B0B">Werner: Erika meldet sich nicht</div>
+<div style="font-size: 16px; line-height: 1.45">Ihr iPhone ist zu Hause, aber seit 11:20 Uhr wird kaum Strom verbraucht. Werner hat Erika um 14:20 Uhr auf dem Handy gefragt, ob alles in Ordnung ist – 10 Minuten lang kam keine Antwort.</div>
+<div style="font-size: 16px; line-height: 1.45">Erika hat Sie bei Werner als Vertrauensperson eingetragen – Sie sind Nr. 1 von 2. Bitte rufen Sie Erika an oder schauen Sie vorbei.</div>
+<div style="font-size: 16px; line-height: 1.5; background: #FFFFFF; border-radius: 10px; padding: 8px 10px"><b>1</b> · Ich kümmere mich – Werner benachrichtigt dann niemanden sonst.<br><b>2</b> · Fehlalarm, alles in Ordnung – Werner beendet den Alarm.<br><b>3</b> · Ich kann gerade nicht – Werner fragt dann Thomas.</div>
+<div style="font-size: 15px; color: #5B5670">Ohne Antwort fragt Werner in 10 Minuten Thomas. Im Notfall: 112.</div>
+</div>
+<button type="button" onClick="{{closeMsg}}" style="min-height: 52px; border-radius: 14px; border: none; background: #381D92; color: #FFFFFF; font-size: 17px; font-weight: 700; cursor: pointer">Schließen</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showCheck}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(30, 36, 33, 0.6); display: flex; align-items: flex-end">
+<div role="alertdialog" aria-label="Werner fragt nach" style="width: 100%; box-sizing: border-box; background: #FFFFFF; border-radius: 26px 26px 0 0; padding: 26px 18px 34px; display: flex; flex-direction: column; gap: 12px">
+<div style="font-size: 16px; color: #5B5670; font-weight: 700">Werner fragt nach</div>
+<div style="font-size: 27px; font-weight: 700; line-height: 1.2">Hallo Erika, ist alles in Ordnung?</div>
+<div style="font-size: 17px; line-height: 1.45">{{checkReason}}</div>
+<div style="font-size: 15px; color: #5B5670; line-height: 1.4">{{checkNext}}</div>
+<button type="button" onClick="{{answerHelp}}" style="min-height: 64px; border-radius: 16px; border: 2px solid #A3261D; background: #FFFFFF; color: #A3261D; font-size: 21px; font-weight: 700; cursor: pointer">Bitte Hilfe holen</button>
+<button type="button" onClick="{{answerOk}}" style="min-height: 80px; border-radius: 18px; border: none; background: #2E6B4F; color: #FFFFFF; font-size: 24px; font-weight: 700; cursor: pointer">Ja, alles gut</button>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      wernerOn: !!this.props.startWerner, screen: this.props.startWerner ? 'start' : 'energie', mode: 'minpv', day: 1, werner: 'ok', paused: false,
+      showDemo: false, showCheck: false, showOff: false, showMsg: false, msgName: 'Sabine', showBaseDemo: false,
+      baseCase: 'weg', sub: 'wer', tested: {},
+      people: [
+        { id: 'p1', name: 'Sabine', way: 'signal' },
+        { id: 'p2', name: 'Thomas', way: 'app' }
+      ],
+      rules: { morgen: { on: true, v: 10 }, ruhe: { on: true, v: 4 }, nacht: { on: true, v: 0 }, warten: { on: true, v: 10 } },
+      sensors: { strom: true, iphone: true, kamera: false, mikro: false }
+    };
+  }
+  setRule(key, patch) {
+    const r = Object.assign({}, this.state.rules);
+    r[key] = Object.assign({}, r[key], patch);
+    this.setState({ rules: r });
+  }
+  move(i, d) {
+    const list = this.state.people.slice();
+    const j = i + d;
+    if (j < 0 || j >= list.length) return;
+    const t = list[i]; list[i] = list[j]; list[j] = t;
+    this.setState({ people: list });
+  }
+  baseModel(key) {
+    // Beispieldaten. Stufen für einen 1-Personen-Haushalt: sehr gut bis 60 W, gut bis 100 W, mittel bis 150 W.
+    // Untergrenze: was dauernd laufen muss (Kühlschrank, Router, Zähler) – darunter setzt Werner kein Ziel.
+    const floor = 48;
+    const C = {
+      start: { weeks: [142], label: ['diese'], wins: [], noWins: true },
+      weg: { weeks: [142, 140, 131, 124, 118, 104, 98, 96], wins: [{ t: 'Erstmals 10 Watt weniger', w: 'Woche 3' }, { t: 'Stufe „gut“ erreicht', w: 'Woche 7' }] },
+      ziel: { weeks: [118, 104, 96, 84, 71, 63, 58, 57], wins: [{ t: 'Erstmals 10 Watt weniger', w: 'August' }, { t: 'Stufe „gut“ erreicht', w: 'September' }, { t: 'Stufe „sehr gut“ erreicht', w: 'Oktober' }, { t: '4 Wochen sehr gut gehalten', w: 'November' }] },
+      halten: { weeks: [58, 57, 59, 56, 58, 57, 58, 57], wins: [{ t: 'Stufe „sehr gut“ erreicht', w: 'Oktober' }, { t: '8 Wochen sehr gut gehalten', w: 'diese Woche' }] },
+      hoch: { weeks: [58, 57, 59, 57, 58, 57, 58, 83], wins: [{ t: 'Stufe „sehr gut“ erreicht', w: 'Oktober' }, { t: '4 Wochen sehr gut gehalten', w: 'November' }] }
+    };
+    const c = C[key];
+    const weeks = c.weeks;
+    const now = weeks[weeks.length - 1];
+    const startV = 142;
+    const level = now <= 60 ? 0 : now <= 100 ? 1 : now <= 150 ? 2 : 3;
+    const names = ['sehr gut', 'gut', 'mittel', 'hoch'];
+    const badgeCols = [['#2E6B4F', '#FFFFFF'], ['#CFE6D8', '#1F4D38'], ['#FBEBD6', '#6E3B0B'], ['#FBE3E0', '#7A1C15']];
+    const euro = (w) => Math.round(w * 8.76 * 0.30);
+    const saved = startV - now;
+    let msgTitle, msgText, tone, goalLabel, goal, goalHint, tileLine, done = false;
+    if (key === 'start') {
+      tone = 'neutral';
+      msgTitle = 'Werner lernt Ihren Ausgangswert';
+      msgText = 'Rund um die Uhr laufen bei Ihnen etwa 142 Watt – Kühlschrank, Router, Geräte im Bereitschaftsmodus. Das kostet rund ' + euro(142) + ' € im Jahr.';
+      goalLabel = 'Erster Schritt';
+      goal = 'Etwa 125 Watt';
+      goalHint = 'Ein kleiner, machbarer Schritt: zum Beispiel Fernseher und Receiver nachts mit einer schaltbaren Steckerleiste ganz ausschalten.';
+      tileLine = 'wird gemessen';
+    } else if (key === 'weg') {
+      tone = 'good';
+      msgTitle = 'Gut gemacht: 46 Watt weniger';
+      msgText = 'Seit dem Start ist Ihr Grundverbrauch von 142 auf 96 Watt gesunken. Das spart rund ' + euro(saved) + ' € im Jahr – ganz ohne Verzicht.';
+      goalLabel = 'Nächster Schritt';
+      goal = 'Etwa 86 Watt';
+      goalHint = 'Werner schlägt immer nur einen kleinen Schritt vor (rund 10 %). Möglich: das alte Ladegerät im Flur, das immer steckt.';
+      tileLine = '46 W weniger als am Anfang';
+    } else if (key === 'ziel') {
+      tone = 'best'; done = true;
+      msgTitle = 'Sehr gut – Ziel erreicht';
+      msgText = 'Mit 57 Watt sind Sie auf einem sehr guten Niveau. Viel weniger geht kaum: Kühlschrank, Router und Stromzähler brauchen zusammen etwa ' + floor + ' Watt. Sie sparen rund ' + euro(startV - now) + ' € im Jahr.';
+      goalLabel = 'Ab jetzt';
+      goal = 'Einfach so weitermachen';
+      goalHint = 'Werner setzt kein neues Ziel mehr. Er meldet sich nur, wenn der Grundverbrauch merklich steigt.';
+      tileLine = 'sehr gut – Ziel erreicht';
+    } else if (key === 'halten') {
+      tone = 'best'; done = true;
+      msgTitle = 'Seit 8 Wochen sehr gut';
+      msgText = 'Ihr Grundverbrauch bleibt stabil bei etwa 57 Watt. Das ist ein Wert, den nur wenige Haushalte schaffen. Danke, dass Sie dranbleiben.';
+      goalLabel = 'Ab jetzt';
+      goal = 'Halten genügt';
+      goalHint = 'Kein neues Ziel – weniger als etwa ' + floor + ' Watt geht nicht, ohne auf Kühlschrank oder Internet zu verzichten.';
+      tileLine = 'sehr gut – gehalten';
+    } else {
+      tone = 'hint';
+      msgTitle = 'Seit Dienstag 25 Watt mehr';
+      msgText = 'Ihr Grundverbrauch ist von 58 auf 83 Watt gestiegen. Läuft seitdem etwas dauerhaft – ein neues Gerät, ein Heizlüfter, eine Lampe? Ihre Erfolge bleiben Ihnen erhalten.';
+      goalLabel = 'Zurück zu';
+      goal = 'Etwa 60 Watt';
+      goalHint = 'Wenn das neue Gerät gewollt ist, ist das in Ordnung. Werner passt sich nach 4 Wochen an und fragt nicht weiter.';
+      tileLine = '25 W mehr seit Dienstag';
+    }
+    const T = {
+      neutral: ['#F2F2FA', '#DCD9EE', '#0B0620'],
+      good: ['#E3F0E8', '#BFD9C9', '#1F4D38'],
+      best: ['#2E6B4F', '#2E6B4F', '#FFFFFF'],
+      hint: ['#FBEBD6', '#E8C79B', '#6E3B0B']
+    }[tone];
+    const max = 160;
+    const labels = c.label || ['-7', '-6', '-5', '-4', '-3', '-2', 'letzte', 'diese'];
+    const lvlColor = (v) => v <= 60 ? '#2E6B4F' : v <= 100 ? '#8DBFA3' : v <= 150 ? '#D9A85C' : '#C2554B';
+    const wk = weeks.map((v, i) => ({
+      v: String(v), label: weeks.length === 1 ? 'diese' : labels[i],
+      style: 'display: block; width: 100%; max-width: 30px; border-radius: 5px 5px 0 0; background: ' + lvlColor(v) + '; height: ' + Math.round(v / max * 84 + 4) + 'px' + (i === weeks.length - 1 ? '; outline: 2px solid #0B0620; outline-offset: 1px' : '')
+    }));
+    const pos = Math.min(100, now <= 60 ? now / 60 * 25 : now <= 100 ? 25 + (now - 60) / 40 * 25 : now <= 150 ? 50 + (now - 100) / 50 * 25 : 75 + Math.min(1, (now - 150) / 100) * 25);
+    const winsOk = 'display: flex; align-items: center; gap: 12px; background: #F2F2FA; border-radius: 14px; padding: 10px 12px';
+    return {
+      now: String(now), tileLine: tileLine, done: done,
+      levelName: names[level],
+      levelBadge: 'font-size: 15px; font-weight: 700; border-radius: 12px; padding: 4px 12px; background: ' + badgeCols[level][0] + '; color: ' + badgeCols[level][1],
+      msgStyle: 'border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; background: ' + T[0] + '; border: 1px solid ' + T[1] + '; color: ' + T[2],
+      msgTitle: msgTitle, msgText: msgText,
+      markerStyle: 'position: absolute; top: 4px; width: 8px; height: 36px; margin-left: -4px; border-radius: 4px; background: #0B0620; left: ' + pos.toFixed(1) + '%',
+      weeks: wk,
+      goalLabel: goalLabel, goal: goal, goalHint: goalHint,
+      goalStyle: 'border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; ' + (done ? 'background: #E3F0E8; color: #1F4D38' : 'background: #F2F2FA; color: #0B0620'),
+      wins: c.wins.map((b) => ({ title: b.t, when: b.w, style: winsOk, dotStyle: 'width: 32px; height: 32px; flex-shrink: 0; border-radius: 16px; background: #2E6B4F; color: #FFFFFF; display: flex; align-items: center; justify-content: center' })),
+      noWins: c.wins.length === 0,
+      tone: tone
+    };
+  }
+  renderVals() {
+    const s = this.state;
+    const go = (screen) => () => this.setState({ screen: screen });
+    const tabBase = 'min-height: 62px; border: none; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 4px 0; ';
+    // Reiter von links nach rechts; rechts liegt das Wichtigste (rechter Daumen).
+    const tabDefs = s.wernerOn
+      ? [{ id: 'personen', label: 'Einstellen' }, { id: 'auto', label: 'Auto' }, { id: 'energie', label: 'Energie' }, { id: 'werner', label: 'Werner' }, { id: 'start', label: 'Start' }]
+      : [{ id: 'personen', label: 'Einstellen' }, { id: 'auto', label: 'Auto' }, { id: 'energie', label: 'Energie' }];
+    const tabs = tabDefs.map((t) => ({
+      label: t.label, pick: go(t.id), current: s.screen === t.id ? 'page' : 'false',
+      isStart: t.id === 'start', isWerner: t.id === 'werner', isEnergie: t.id === 'energie', isAuto: t.id === 'auto', isPersonen: t.id === 'personen',
+      style: tabBase + (s.screen === t.id ? 'background: #E4DEFA; color: #24105F; font-weight: 700' : 'background: transparent; color: #5B5670')
+    }));
+    const navStyle = 'flex-shrink: 0; box-sizing: border-box; height: 92px; padding: 8px 6px 22px; background: #FFFFFF; border-top: 1px solid #DCD9EE; display: grid; grid-template-columns: repeat(' + tabDefs.length + ', minmax(0, 1fr)); gap: 4px';
+
+    const base = this.baseModel(s.baseCase);
+    const tileCol = base.tone === 'best' ? 'background: #E3F0E8; border: 1px solid #BFD9C9; color: #1F4D38; ' : base.tone === 'good' ? 'background: #FFFFFF; border: 2px solid #8DBFA3; color: #0B0620; ' : base.tone === 'hint' ? 'background: #FBEBD6; border: 1px solid #E8C79B; color: #6E3B0B; ' : 'background: #FFFFFF; border: 1px solid #DCD9EE; color: #0B0620; ';
+    const baseTileStyle = 'text-align: left; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; min-height: 120px; ' + tileCol;
+    const baseMiniStyle = 'border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 4px; ' + tileCol;
+    const scen = [
+      { id: 'start', label: 'Erste Woche: Ausgangswert 142 W' },
+      { id: 'weg', label: 'Nach 8 Wochen: 46 W weniger' },
+      { id: 'ziel', label: 'Nach 4 Monaten: 57 W – sehr gut' },
+      { id: 'halten', label: 'Sehr gut gehalten: kein neues Ziel' },
+      { id: 'hoch', label: 'Wieder gestiegen: freundlicher Hinweis' }
+    ];
+    const baseScenarios = scen.map((b) => ({
+      label: b.label, selected: s.baseCase === b.id ? 'true' : 'false',
+      pick: () => this.setState({ baseCase: b.id, showBaseDemo: false }),
+      style: 'min-height: 54px; border-radius: 14px; font-size: 16px; cursor: pointer; text-align: left; padding: 0 16px; ' + (s.baseCase === b.id ? 'border: 2px solid #381D92; background: #E4DEFA; color: #24105F; font-weight: 700' : 'border: 1px solid #DCD9EE; background: #FFFFFF; color: #0B0620')
+    }));
+
+    // Strompreis: 6 Stunden zurück, 24 voraus (Beispieldaten in ct)
+    const price = [26, 25, 25, 26, 28, 30, 30, 31, 29, 28, 27, 28, 30, 33, 36, 39, 38, 35, 31, 28, 26, 24, 24, 25, 26, 27, 29, 31, 32, 30];
+    const sorted = price.slice().sort((a, b) => a - b);
+    const lo = sorted[Math.floor(price.length / 3)], hi = sorted[Math.floor(price.length * 2 / 3)];
+    const priceBars = price.map((v, i) => ({
+      style: 'flex-grow: 1; flex-basis: 0; border-radius: 3px 3px 0 0; height: ' + Math.round((v - 15) / 25 * 96 + 6) + 'px; background: ' + (v <= lo ? '#2E6B4F' : v >= hi ? '#A3261D' : '#8C88A6') + (i < 6 ? '; opacity: 0.45' : '')
+    }));
+    const sun = [0.02, 0.06, 0.12, 0.18, 0.22, 0.25, 0.26, 0.22, 0.14, 0.06, 0.01, 0];
+    const sunBars = sun.map((v) => ({ style: 'flex-grow: 1; flex-basis: 0; border-radius: 3px 3px 0 0; background: #D9A21B; height: ' + Math.round(v / 0.26 * 90 + 2) + 'px' }));
+    const use = [0.18, 0.22, 0.12, 0.07, 0.06, 0.06, 0.06, 0.06, 0.07, 0.15, 0.2, 0.12, 0.14, 0.16, 0.22, 0.2, 0.12, 0.1];
+    const useBars = use.map((v, i) => ({ style: 'flex-grow: 1; flex-basis: 0; border-radius: 3px 3px 0 0; height: ' + Math.round(v / 0.22 * 90 + 2) + 'px; background: ' + (i < 12 ? '#381D92' : '#A9BFD4') }));
+
+    const dayDefs = [
+      { name: 'Heute', weather: 'Trüb', kwh: '1,5 kWh', good: false, tipT: 'Heute lohnt sich wenig', tip: 'Wenig Sonne. Waschen lieber in die günstige Stunde legen: heute 23 Uhr.' },
+      { name: 'Fr', weather: 'Sonnig', kwh: '4,1 kWh', good: true, tipT: 'Freitag ist Ihr Sonnentag', tip: 'Zwischen 11 und 14 Uhr reicht der Sonnenstrom für eine Waschmaschine.' },
+      { name: 'Sa', weather: 'Wolkig', kwh: '2,0 kWh', good: false, tipT: 'Samstag: mittelmäßig', tip: 'Für die Spülmaschine reicht es mittags.' },
+      { name: 'So', weather: 'Regen', kwh: '0,5 kWh', good: false, tipT: 'Sonntag: Regentag', tip: 'Kaum Sonnenstrom zu erwarten.' }
+    ];
+    const dBase = 'flex-shrink: 0; width: 92px; min-height: 120px; border-radius: 16px; padding: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; cursor: pointer; text-align: left; ';
+    const days = dayDefs.map((d, i) => ({
+      name: d.name, weather: d.weather, kwh: d.kwh, selected: s.day === i ? 'true' : 'false',
+      pick: () => this.setState({ day: i }),
+      style: dBase + (s.day === i ? 'border: 3px solid #381D92; ' : 'border: 1px solid #DCD9EE; ') + (d.good ? 'background: #FBF1D9; color: #5A3E05' : 'background: #FFFFFF; color: #0B0620')
+    }));
+    const sd = dayDefs[s.day];
+    const dayTipStyle = 'border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; ' + (sd.good ? 'background: #E3F0E8; border: 1px solid #BFD9C9; color: #1F4D38' : 'background: #FFFFFF; border: 1px solid #DCD9EE; color: #0B0620');
+
+    const modeDefs = [
+      { id: 'minpv', title: 'Sonne nutzen, Plan einhalten', text: 'Lädt mit Sonnenstrom und nur so viel Netzstrom wie nötig. Empfohlen.', short: 'lädt nach Plan' },
+      { id: 'pv', title: 'Nur mit Sonne', text: 'Lädt ausschließlich mit Sonnenstrom. Kostet nichts, dauert lange.', short: 'wartet auf Sonne' },
+      { id: 'now', title: 'Sofort laden', text: 'Lädt gleich mit voller Leistung, auch mit Netzstrom.', short: 'lädt mit voller Kraft' },
+      { id: 'off', title: 'Pause', text: 'Das Auto wird nicht geladen.', short: 'pausiert' }
+    ];
+    const cur = modeDefs.find((m) => m.id === s.mode) || modeDefs[0];
+    const modeBase = 'text-align: left; min-height: 84px; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; ';
+    const modes = modeDefs.map((m) => ({
+      title: m.title, text: m.text, checked: s.mode === m.id ? 'true' : 'false',
+      pick: () => this.setState({ mode: m.id }),
+      style: modeBase + (s.mode === m.id ? 'border: 3px solid #381D92; background: #E4DEFA; color: #24105F' : 'border: 1px solid #DCD9EE; background: #FFFFFF; color: #0B0620')
+    }));
+
+    const pillBase = 'align-self: flex-start; min-height: 48px; border-radius: 24px; padding: 0 18px; font-size: 16px; font-weight: 700; cursor: pointer; ';
+    const okPill = pillBase + 'border: 1px solid #BFD9C9; background: #E3F0E8; color: #1F4D38';
+    const warnPill = pillBase + 'border: 1px solid #E8C79B; background: #FBEBD6; color: #6E3B0B';
+    const okBox = 'background: #E3F0E8; border: 1px solid #BFD9C9; color: #1F4D38';
+    const warnBox = 'background: #FBEBD6; border: 1px solid #E8C79B; color: #6E3B0B';
+    const first = s.people[0] ? s.people[0].name : null;
+    const W = {
+      ok: { pill: okPill, pillText: 'Werner: Alles in Ordnung', box: okBox, title: 'Alles in Ordnung', text: 'Ihr Tag verläuft wie gewohnt. Zuletzt um 7:40 Uhr: Wasserkocher.' },
+      ruhig: { pill: warnPill, pillText: 'Werner fragt nach', box: warnBox, title: 'Ungewöhnlich ruhig', text: 'Ihr iPhone ist zu Hause, aber seit 11:20 Uhr wird kaum Strom verbraucht.' },
+      aktiv: { pill: warnPill, pillText: 'Werner fragt nach', box: warnBox, title: 'Ungewöhnlich für die Nacht', text: 'Um 3:05 Uhr wurde der Herd eingeschaltet. Nachts ist das sonst nie so.' },
+      bestaetigt: { pill: okPill, pillText: 'Werner: Alles in Ordnung', box: okBox, title: 'Danke, Werner ist beruhigt', text: 'Sie haben bestätigt, dass alles gut ist. Niemand wurde benachrichtigt.' },
+      hilfe: { pill: pillBase + 'border: none; background: #A3261D; color: #FFFFFF', pillText: 'Hilfe ist unterwegs', box: 'background: #FBE3E0; border: 1px solid #E9B3AD; color: #7A1C15', title: 'Hilfe ist unterwegs', text: first ? ('Werner hat ' + first + ' benachrichtigt. Antwortet niemand, geht es in Ihrer Reihenfolge weiter.') : 'Sie haben niemanden eingetragen. Werner empfiehlt den Notruf 112.' }
+    };
+    const V = s.paused
+      ? { pill: pillBase + 'border: 1px solid #BDB8D6; background: #ECEBF5; color: #3B3654', pillText: 'Werner pausiert', box: 'background: #ECEBF5; border: 1px solid #BDB8D6; color: #3B3654', title: 'Werner pausiert', text: 'Zum Beispiel wegen Besuch oder Urlaub. Werner meldet nichts, bis Sie ihn wieder einschalten.' }
+      : W[s.werner];
+    const boxBase = 'border-radius: 18px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; ';
+    const logBase = [
+      { t: '6:55', text: 'Licht im Bad' },
+      { t: '7:40', text: 'Wasserkocher' },
+      { t: '9:30', text: 'iPhone unterwegs – Werner schweigt' },
+      { t: '10:55', text: 'iPhone wieder zu Hause' }
+    ];
+    let log = logBase;
+    if (!s.paused && s.werner === 'ruhig') log = logBase.concat([{ t: '11:20', text: 'Seitdem nur Grundlast' }, { t: '14:20', text: 'Werner hat nachgefragt' }]);
+    if (!s.paused && s.werner === 'aktiv') log = [{ t: '22:30', text: 'Fernseher aus' }, { t: '3:05', text: 'Herd eingeschaltet' }, { t: '3:15', text: 'Werner hat nachgefragt' }];
+    if (!s.paused && s.werner === 'bestaetigt') log = logBase.concat([{ t: '14:22', text: 'Sie: alles gut' }]);
+    if (!s.paused && s.werner === 'hilfe') log = logBase.concat([{ t: '14:22', text: 'Hilfe angefordert' }]);
+    const reasons = {
+      ruhig: 'Ihr iPhone ist zu Hause, aber seit 11:20 Uhr wird kaum Strom verbraucht. Das ist ungewöhnlich für diese Uhrzeit.',
+      aktiv: 'Um 3:05 Uhr wurde der Herd eingeschaltet. Das ist nachts ungewöhnlich.'
+    };
+
+    const wayLabels = { app: 'Home-Assistant-App', signal: 'Signal', mail: 'E-Mail', off: 'Aus' };
+    const wOn = 'min-height: 48px; border-radius: 12px; border: 2px solid #381D92; background: #E4DEFA; color: #24105F; font-size: 15px; font-weight: 700; cursor: pointer';
+    const wOff = 'min-height: 48px; border-radius: 12px; border: 1px solid #DCD9EE; background: #FFFFFF; color: #5B5670; font-size: 15px; cursor: pointer';
+    const people = s.people.map((p, i) => ({
+      nr: String(i + 1), name: p.name,
+      summary: p.way === 'off' ? 'wird nicht informiert' : ('per ' + wayLabels[p.way]),
+      ways: Object.keys(wayLabels).map((k) => ({
+        label: wayLabels[k], on: p.way === k ? 'true' : 'false', style: p.way === k ? wOn : wOff,
+        pick: () => this.setState({ people: s.people.map((x) => x.id === p.id ? Object.assign({}, x, { way: k }) : x) })
+      })),
+      testLabel: s.tested[p.id] ? 'Test gesendet' : 'Test senden',
+      test: () => this.setState({ tested: Object.assign({}, s.tested, { [p.id]: true }) }),
+      up: () => this.move(i, -1), down: () => this.move(i, 1)
+    }));
+    const subBase = 'min-height: 48px; border-radius: 12px; border: none; font-size: 16px; cursor: pointer; ';
+    const subtabs = [{ id: 'wer', label: 'Wer & wie' }, { id: 'wann', label: 'Wann' }, { id: 'sensoren', label: 'Sensoren' }].map((t) => ({
+      label: t.label, selected: s.sub === t.id ? 'true' : 'false', pick: () => this.setState({ sub: t.id }),
+      style: subBase + (s.sub === t.id ? 'background: #FFFFFF; color: #24105F; font-weight: 700' : 'background: transparent; color: #3B3654')
+    }));
+    const sw = (on) => 'width: 64px; height: 38px; flex-shrink: 0; border-radius: 19px; border: none; padding: 4px; cursor: pointer; display: flex; ' + (on ? 'background: #2E6B4F; justify-content: flex-end' : 'background: #8C88A6; justify-content: flex-start');
+    const knob = 'display: block; width: 30px; height: 30px; border-radius: 15px; background: #FFFFFF';
+    const R = s.rules;
+    const ruleDefs = [
+      { key: 'morgen', title: 'Morgens nichts los', text: 'Werner fragt nach, wenn bis zu dieser Uhrzeit noch nichts im Haus passiert ist.', fmt: (v) => 'bis ' + v + ':00 Uhr', step: 1, min: 7, max: 12 },
+      { key: 'ruhe', title: 'Tagsüber lange still', text: 'Werner fragt nach, wenn Sie zu Hause sind und so lange nur Grundlast läuft.', fmt: (v) => v + ' Stunden', step: 1, min: 2, max: 8 },
+      { key: 'nacht', title: 'Nachts ungewöhnlich aktiv', text: 'Werner fragt nach, wenn zwischen 0 und 5 Uhr z. B. der Herd angeht.', fmt: (v) => v === 0 ? 'sofort' : ('nach ' + v * 10 + ' Min.'), step: 1, min: 0, max: 3 },
+      { key: 'warten', title: 'Wartezeit auf Ihre Antwort', text: 'So lange wartet Werner auf Ihr „Alles gut“, bevor er die erste Person informiert.', fmt: (v) => v + ' Minuten', step: 5, min: 5, max: 30 }
+    ];
+    const rules = ruleDefs.map((d) => ({
+      title: d.title, text: d.text, value: R[d.key].on ? d.fmt(R[d.key].v) : 'aus', on: R[d.key].on ? 'true' : 'false',
+      switchStyle: sw(R[d.key].on), knobStyle: knob,
+      toggle: () => this.setRule(d.key, { on: !R[d.key].on }),
+      minus: () => this.setRule(d.key, { v: Math.max(d.min, R[d.key].v - d.step) }),
+      plus: () => this.setRule(d.key, { v: Math.min(d.max, R[d.key].v + d.step) })
+    }));
+    const S = s.sensors;
+    const badgeOk = 'align-self: flex-start; font-size: 14px; font-weight: 700; border-radius: 10px; padding: 4px 10px; background: #E3F0E8; color: #1F4D38';
+    const badgeTodo = 'align-self: flex-start; font-size: 14px; font-weight: 700; border-radius: 10px; padding: 4px 10px; background: #ECEBF5; color: #3B3654';
+    const sensorDefs = [
+      { key: 'strom', title: 'Stromverbrauch im Haus', text: 'Am Zähler gemessen: Wasserkocher, Herd, Fernseher zeigen Ihren Tagesrhythmus.', badge: 'Vorhanden', ok: true },
+      { key: 'iphone', title: 'Ihr iPhone: zu Hause oder unterwegs', text: 'Sind Sie unterwegs, schweigt Werner.', badge: 'Vorhanden', ok: true },
+      { key: 'kamera', title: 'Kamera (Person erkennen)', text: 'Nur mit Ihrer Erlaubnis. Bilder bleiben im Haus und werden nicht gespeichert.', badge: 'Aus – Ihre Erlaubnis nötig', ok: false },
+      { key: 'mikro', title: 'Mikrofon (Geräusche)', text: 'Nur mit Ihrer Erlaubnis. Es wird nichts aufgenommen oder verschickt.', badge: 'Aus – Ihre Erlaubnis nötig', ok: false }
+    ];
+    const sensors = sensorDefs.map((d) => ({
+      title: d.title, text: d.text, badge: d.badge, badgeStyle: d.ok ? badgeOk : badgeTodo,
+      on: S[d.key] ? 'true' : 'false', switchStyle: sw(S[d.key]), knobStyle: knob,
+      toggle: () => this.setState({ sensors: Object.assign({}, S, { [d.key]: !S[d.key] }) })
+    }));
+    const waitMin = R.warten.on ? R.warten.v : 10;
+    const screen = (!s.wernerOn && (s.screen === 'start' || s.screen === 'werner')) ? 'energie' : s.screen;
+
+    return {
+      tabs: tabs, navStyle: navStyle,
+      isHome: screen === 'start', isEnergie: screen === 'energie', isAuto: screen === 'auto', isWerner: screen === 'werner', isPersonen: screen === 'personen',
+      wernerOff: !s.wernerOn, wernerIsOn: s.wernerOn,
+      wernerStateLine: s.paused ? 'Eingeschaltet, aber pausiert – Werner fragt gerade nicht nach.' : 'Eingeschaltet – Werner achtet darauf, ob bei Ihnen alles normal ist.',
+      goEnergie: go('energie'), goAuto: go('auto'), goWerner: go('werner'),
+      base: base, baseTileStyle: baseTileStyle, baseMiniStyle: baseMiniStyle, baseScenarios: baseScenarios,
+      openBaseDemo: () => this.setState({ showBaseDemo: true }), closeBaseDemo: () => this.setState({ showBaseDemo: false }), showBaseDemo: s.showBaseDemo,
+      priceBars: priceBars, sunBars: sunBars, useBars: useBars,
+      days: days, dayTipStyle: dayTipStyle, dayTipTitle: sd.tipT, dayTipText: sd.tip,
+      autoShort: cur.short, modes: modes,
+      wernerPill: V.pill, wernerPillText: V.pillText, wernerBox: boxBase + V.box, wernerTitle: V.title, wernerText: V.text,
+      log: log,
+      pauseLabel: s.paused ? 'Werner wieder einschalten' : 'Werner pausieren (Besuch, Urlaub)',
+      pauseBtn: 'min-height: 56px; border-radius: 16px; font-size: 17px; font-weight: 700; cursor: pointer; ' + (s.paused ? 'border: none; background: #381D92; color: #FFFFFF' : 'border: 1px solid #BDB8D6; background: #FFFFFF; color: #0B0620'),
+      togglePause: () => this.setState({ paused: !s.paused }),
+      people: people,
+      subtabs: subtabs, subWer: s.sub === 'wer', subWann: s.sub === 'wann', subSensoren: s.sub === 'sensoren',
+      rules: rules, sensors: sensors,
+      wernerOn: () => this.setState({ wernerOn: true, screen: 'personen', sub: 'wer' }),
+      askOff: () => this.setState({ showOff: true }), cancelOff: () => this.setState({ showOff: false }),
+      confirmOff: () => this.setState({ wernerOn: false, showOff: false, screen: 'energie', werner: 'ok', paused: false }),
+      showOff: s.showOff,
+      showMsg: s.showMsg, msgName: first || 'die Person', showExample: () => this.setState({ showMsg: true }), closeMsg: () => this.setState({ showMsg: false }),
+      showDemo: s.showDemo, showCheck: s.showCheck,
+      checkReason: reasons[s.lastSim] || 'Sie haben auf „Ich brauche Hilfe“ getippt. Soll Werner jemanden holen?',
+      checkNext: first ? ('Ohne Antwort informiert Werner in ' + waitMin + ' Minuten ' + first + '.') : 'Sie haben niemanden eingetragen. Werner fragt nur Sie.',
+      openDemo: () => this.setState({ showDemo: true }),
+      closeDemo: () => this.setState({ showDemo: false }),
+      simRuhig: () => this.setState({ werner: 'ruhig', paused: false, lastSim: 'ruhig', showDemo: false, showCheck: true }),
+      simAktiv: () => this.setState({ werner: 'aktiv', paused: false, lastSim: 'aktiv', showDemo: false, showCheck: true }),
+      reset: () => this.setState({ werner: 'ok', paused: false, lastSim: null, showDemo: false, showCheck: false, screen: 'start' }),
+      openCheck: () => this.setState({ lastSim: null, showCheck: true }),
+      answerOk: () => this.setState({ werner: 'bestaetigt', showCheck: false, screen: 'werner' }),
+      answerHelp: () => this.setState({ werner: 'hilfe', showCheck: false, screen: 'werner' })
+    };
+  }
+}
+</script>
+</body>
+</html>

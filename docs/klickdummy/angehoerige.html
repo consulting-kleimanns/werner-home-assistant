@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Werner-Nachricht an eine Vertrauensperson</title>
+<script src="dc.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#381D92}a:hover{color:#24105F}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #ECEBF5; color: #0B0620; font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; display: flex; flex-direction: column">
+
+<header style="flex-shrink: 0; background: #FFFFFF; border-bottom: 1px solid #DCD9EE; padding: 52px 16px 12px; display: flex; align-items: center; gap: 12px">
+<span style="width: 42px; height: 42px; border-radius: 21px; background: #381D92; color: #FFFFFF; font-weight: 700; font-size: 18px; display: flex; align-items: center; justify-content: center">W</span>
+<span style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 18px; font-weight: 700">Werner · Erikas Zuhause</span>
+<span style="font-size: 14px; color: #5B5670">{{channelLine}}</span>
+</span>
+</header>
+
+<div role="tablist" aria-label="Kanal" style="flex-shrink: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 10px 12px 0">
+<sc-for list="{{chans}}" as="c" hint-placeholder-count="3">
+<button type="button" role="tab" aria-selected="{{c.selected}}" onClick="{{c.pick}}" style="{{c.style}}">{{c.label}}</button>
+</sc-for>
+</div>
+
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px">
+<div style="align-self: center; font-size: 13px; color: #5B5670; background: #FFFFFF; border-radius: 10px; padding: 4px 10px">Heute 14:30</div>
+
+<div style="align-self: flex-start; max-width: 88%; background: #FFFFFF; border-radius: 4px 16px 16px 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+<div style="font-size: 17px; font-weight: 700; color: #6E3B0B">Werner: Erika meldet sich nicht</div>
+<div style="font-size: 16px; line-height: 1.45">Ihr iPhone ist zu Hause, aber seit 11:20 Uhr wird kaum Strom verbraucht. Werner hat Erika um 14:20 Uhr auf dem Handy gefragt, ob alles in Ordnung ist – 10 Minuten lang kam keine Antwort.</div>
+<div style="font-size: 16px; line-height: 1.45">Erika hat Sie bei Werner als Vertrauensperson eingetragen – Sie sind <b>Nr. 1 von 2</b>. Bitte rufen Sie Erika an oder schauen Sie vorbei.</div>
+<div style="font-size: 16px; line-height: 1.5; background: #F2F2FA; border-radius: 10px; padding: 8px 10px">{{answerHow}}<br><b>1</b> · Ich kümmere mich – Werner benachrichtigt dann niemanden sonst.<br><b>2</b> · Fehlalarm, alles in Ordnung – Werner beendet den Alarm.<br><b>3</b> · Ich kann gerade nicht – Werner fragt dann Thomas.</div>
+<div style="font-size: 14px; color: #5B5670; line-height: 1.4">Ohne Antwort fragt Werner in 10 Minuten Thomas. Im Notfall: 112.</div>
+<div style="font-size: 13px; color: #5B5670; text-align: right">14:30</div>
+</div>
+
+<sc-for list="{{thread}}" as="m" hint-placeholder-count="0">
+<div style="{{m.style}}">
+<div style="font-size: 16px; line-height: 1.45">{{m.text}}</div>
+<div style="font-size: 13px; color: #5B5670; text-align: right">{{m.t}}</div>
+</div>
+</sc-for>
+</div>
+
+<sc-if value="{{open}}" hint-placeholder-val="{{ true }}">
+<div style="flex-shrink: 0; background: #FFFFFF; border-top: 1px solid #DCD9EE; padding: 10px 12px 30px; display: flex; flex-direction: column; gap: 8px">
+<div style="font-size: 14px; color: #5B5670">Antwort antippen (Vorführung)</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<button type="button" onClick="{{r3}}" style="min-height: 56px; border-radius: 14px; border: 1px solid #DCD9EE; background: #FFFFFF; color: #0B0620; font-size: 15px; cursor: pointer">3 · Kann nicht</button>
+<button type="button" onClick="{{r2}}" style="min-height: 56px; border-radius: 14px; border: 1px solid #DCD9EE; background: #FFFFFF; color: #0B0620; font-size: 15px; cursor: pointer">2 · Fehlalarm</button>
+<button type="button" onClick="{{r1}}" style="min-height: 56px; border-radius: 14px; border: none; background: #2E6B4F; color: #FFFFFF; font-size: 16px; font-weight: 700; cursor: pointer">1 · Ich kümmere mich</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{closed}}" hint-placeholder-val="{{ false }}">
+<div style="flex-shrink: 0; background: #FFFFFF; border-top: 1px solid #DCD9EE; padding: 10px 12px 30px">
+<button type="button" onClick="{{reset}}" style="width: 100%; min-height: 52px; border-radius: 14px; border: 1px solid #DCD9EE; background: #FFFFFF; color: #0B0620; font-size: 16px; cursor: pointer">Vorführung zurücksetzen</button>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { reply: null, chan: 'signal' };
+  }
+  renderVals() {
+    const s = this.state;
+    const mine = 'align-self: flex-end; max-width: 80%; background: #D9E8DF; border-radius: 16px 4px 16px 16px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px';
+    const theirs = 'align-self: flex-start; max-width: 88%; background: #FFFFFF; border-radius: 4px 16px 16px 16px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px';
+    const answers = {
+      '1': [{ style: mine, text: s.chan === 'signal' ? '1' : 'Ich kümmere mich', t: '14:33' }, { style: theirs, text: 'Danke! Werner benachrichtigt niemanden sonst. Erika sieht auf ihrem Handy: „Sabine kümmert sich“.', t: '14:33' }],
+      '2': [{ style: mine, text: s.chan === 'signal' ? '2' : 'Fehlalarm', t: '14:33' }, { style: theirs, text: 'Verstanden: Fehlalarm. Werner beendet den Alarm.', t: '14:33' }],
+      '3': [{ style: mine, text: s.chan === 'signal' ? '3' : 'Ich kann gerade nicht', t: '14:33' }, { style: theirs, text: 'In Ordnung. Werner fragt jetzt Thomas.', t: '14:33' }]
+    };
+    let thread = s.reply ? answers[s.reply] : [];
+    const cBase = 'min-height: 44px; border-radius: 12px; font-size: 15px; cursor: pointer; ';
+    const chans = [{ id: 'app', label: 'App' }, { id: 'signal', label: 'Signal' }, { id: 'mail', label: 'E-Mail' }].map((c) => ({
+      label: c.label, selected: s.chan === c.id ? 'true' : 'false',
+      pick: () => this.setState({ chan: c.id }),
+      style: cBase + (s.chan === c.id ? 'border: 2px solid #381D92; background: #FFFFFF; color: #24105F; font-weight: 700' : 'border: 1px solid #CFCBE2; background: transparent; color: #3B3654')
+    }));
+    const lines = { app: 'Mitteilung der Home-Assistant-App', signal: 'per Signal-Nachricht', mail: 'per E-Mail – Antwort per Klick' };
+    const how = { app: 'Tippen Sie unten auf eine Antwort:', signal: 'Antworten Sie mit 1, 2 oder 3:', mail: 'Klicken Sie in der E-Mail auf eine Antwort:' };
+    return {
+      thread: thread, chans: chans, channelLine: lines[s.chan], answerHow: how[s.chan],
+      open: !s.reply, closed: !!s.reply,
+      r1: () => this.setState({ reply: '1' }),
+      r2: () => this.setState({ reply: '2' }),
+      r3: () => this.setState({ reply: '3' }),
+      reset: () => this.setState({ reply: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

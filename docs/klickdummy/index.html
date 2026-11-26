@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werner – Klickdummy (Musterdaten)</title>
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:#F2F2FA;color:#0B0620}
+header{max-width:1240px;margin:0 auto;padding:32px 24px 8px}
+h1{margin:0 0 8px;font-size:32px}
+p{margin:0 0 16px;color:#5B5670;font-size:17px;line-height:1.5}
+.toggle{display:inline-flex;gap:6px;background:#E4E1F2;border-radius:32px;padding:5px}
+.toggle button{min-height:44px;padding:0 20px;border-radius:28px;border:none;background:transparent;font:inherit;font-size:16px;color:#3B3654;cursor:pointer}
+.toggle button[aria-pressed="true"]{background:#381D92;color:#fff;font-weight:600}
+main{max-width:1240px;margin:0 auto;padding:16px 24px 48px;display:flex;flex-wrap:wrap;gap:40px}
+figure{margin:0;display:flex;flex-direction:column;gap:10px}
+figcaption{font-size:15px;font-weight:600}
+iframe{width:390px;height:844px;border:0;border-radius:36px;background:#fff;box-shadow:0 8px 32px rgba(11,6,32,.12)}
+a{color:#381D92}
+</style>
+</head>
+<body>
+<header>
+<h1>Werner – Klickdummy</h1>
+<p>Zum Durchklicken, mit Musterdaten (Erika, Sabine, Thomas). Werner ist anfangs aus – wie nach der Installation. Unter „Einstellen“ lässt er sich ein- und ausschalten.</p>
+<div class="toggle" role="group" aria-label="Werner">
+<button type="button" id="aus" aria-pressed="true">Ohne Werner</button>
+<button type="button" id="an" aria-pressed="false">Mit Werner</button>
+</div>
+</header>
+<main>
+<figure><figcaption>Erikas Handy – Mein Zuhause</figcaption><iframe id="handy" src="main.html" title="Erikas Handy"></iframe></figure>
+<figure><figcaption>Sabine – Nachricht von Werner</figcaption><iframe src="angehoerige.html" title="Nachricht an Sabine"></iframe></figure>
+</main>
+<header><p>Mehr: <a href="https://github.com/consulting-kleimanns/werner-home-assistant">Werner auf GitHub</a> · <a href="https://effizientes-heim.de/werner/">effizientes-heim.de/werner</a></p></header>
+<script>
+const f=document.getElementById('handy'),a=document.getElementById('an'),b=document.getElementById('aus');
+function set(on){f.src=on?'main.html?werner=1':'main.html';a.setAttribute('aria-pressed',on);b.setAttribute('aria-pressed',!on);}
+a.onclick=()=>set(true);b.onclick=()=>set(false);
+</script>
+</body>
+</html>
