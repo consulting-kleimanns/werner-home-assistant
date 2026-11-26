@@ -47,7 +47,7 @@ async def test_entitaeten_angelegt(hass: HomeAssistant, entry, notify_erika) -> 
     werner = [s for s in states if s.entity_id.split(".")[0] in (
         "sensor", "switch", "number", "text", "select", "button") and s.entity_id != "sensor.hausleistung"]
     # 2 Sensoren, 6 Schalter, 3 Zahlen, 12 Texte, 3 Auswahlen, 2 Knöpfe
-    assert len(werner) == 28
+    assert len(werner) == 29
     status = [s for s in werner if s.attributes.get("device_class") == "enum"]
     assert status and status[0].state == STATUS_OK
 
@@ -173,8 +173,8 @@ async def test_attribute_fuer_oberflaeche(hass: HomeAssistant, entry, notify_eri
     assert attrs["entry_id"] == entry.entry_id
     assert attrs["person"] == PERSON
     assert attrs["sources"] == ["sensor.hausleistung"]
-    # Alle 28 Entitäten sind für die Oberfläche auffindbar.
-    assert len(attrs["entities"]) == 28
+    # Alle 29 Entitäten sind für die Oberfläche auffindbar.
+    assert len(attrs["entities"]) == 29
     assert attrs["entities"]["status"] == status_id
     assert attrs["entities"]["person_2_way"].startswith("select.")
 

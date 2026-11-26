@@ -1,3 +1,5 @@
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="custom_components/werner/brand/dark_logo.png"><img src="custom_components/werner/brand/logo.png" alt="Werner" width="330"></picture></p>
+
 # Werner – ein freundlicher Aufpasser für Senioren
 
 **Werner** ist ein Warnsystem für Home Assistant. Es merkt, wenn es bei einem allein lebenden Menschen ungewöhnlich still ist – oder nachts ungewöhnlich viel passiert. Dann fragt Werner **zuerst den Bewohner selbst**: „Ist alles in Ordnung?“ Erst wenn keine Antwort kommt, informiert Werner nacheinander die Vertrauenspersonen, die der Bewohner selbst ausgewählt hat.
@@ -20,7 +22,7 @@ In HACS auf **Herunterladen** tippen und Home Assistant neu starten.
 
 [![Werner hinzufügen](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=werner)
 
-Der Assistent fragt nur, für wen Werner da sein soll. Danach steht **„Mein Zuhause“** in der Seitenleiste. Dort richtet der Bewohner alles Weitere selbst ein – eine Liste zeigt, was noch fehlt. Weitere Bewohner schalten Werner dort für sich selbst ein.
+Der Assistent fragt nur, für wen „Mein Zuhause“ da sein soll. Danach steht **„Mein Zuhause“** in der Seitenleiste – zuerst mit Energie und Einstellungen. **Das Warnsystem Werner ist eine Option:** Es ist anfangs aus, und der Bewohner schaltet es unter „Einstellen“ bewusst ein. Dann richtet er alles Weitere selbst ein – eine Liste zeigt, was noch fehlt. Weitere Bewohner schalten Werner dort für sich selbst ein.
 
 Die Knöpfe öffnen Ihr eigenes Home Assistant über my.home-assistant.io. Beim ersten Mal fragt die Seite nach der Adresse Ihres Home Assistant. Werner und alle Daten bleiben bei Ihnen zu Hause.
 

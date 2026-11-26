@@ -52,6 +52,8 @@ async def test_bewohner_anlegen(hass: HomeAssistant, notify_erika) -> None:
         "name": "Erika",
         "person": PERSON,
         "notify_service": NOTIFY_ERIKA,
+        # Werner ist eine Option: neu eingerichtet ist das Warnsystem aus.
+        "start_active": False,
     }
 
 
@@ -63,7 +65,9 @@ async def test_nur_person_waehlen(hass: HomeAssistant, notify_erika) -> None:
     )
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {"person": PERSON})
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["data"] == {"name": "Erika", "person": PERSON, "notify_service": NOTIFY_ERIKA}
+    assert result["data"] == {
+        "name": "Erika", "person": PERSON, "notify_service": NOTIFY_ERIKA, "start_active": False
+    }
 
 
 async def test_unbekannter_benachrichtigungsdienst(hass: HomeAssistant) -> None:

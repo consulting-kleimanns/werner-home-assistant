@@ -1,5 +1,12 @@
 # Änderungen
 
+## 1.0.0 – 2026-11-25
+
+- **Werner ist eine Option.** „Mein Zuhause“ startet mit Energie und Einstellungen. Das Warnsystem Werner ist bei neuen Einrichtungen ausgeschaltet; der Bewohner schaltet es unter „Einstellen“ bewusst ein („Werner einschalten“, mit Erklärung in einfacher Sprache) und kann es dort jederzeit wieder ausschalten. Die Einstellungen bleiben dabei erhalten.
+- Ist Werner aus, zeigt „Mein Zuhause“ nur die Reiter Einstellen, (Auto) und Energie – Energie steht an erster Stelle. Die Reiter Start und Werner erscheinen erst, wenn Werner eingeschaltet ist.
+- Neuer Schalter „Werner eingeschaltet“ und Status „Ausgeschaltet“. Bestehende Einrichtungen bleiben eingeschaltet.
+- **Eigenes Logo:** Werner als freundliches Haus mit Gesicht. Home Assistant zeigt es bei Installation, Update, unter „Geräte & Dienste“ und im Marketplace – in hellem und dunklem Design (Ordner `brand/`, ab Home Assistant 2026.3).
+
 ## 0.9.0 – 2026-11-25
 
 - **Solaranlage selbst einrichten:** Unter Energie › „Was hier angezeigt wird – ändern“ fragt Werner in einfachen Worten nach Leistung in Watt, Himmelsrichtung („nach Süden“) und Aufstellung („senkrecht – am Balkongeländer“, „schräg wie ein Hausdach“ …). Werner legt dafür selbst einen Eintrag der eingebauten Integration Forecast.Solar am Standort des Zuhauses an; Ändern und Entfernen betrifft nur diesen eigenen Eintrag. Ein Helfer ist dafür nicht mehr nötig.

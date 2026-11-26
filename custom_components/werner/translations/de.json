@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Werner einrichten",
-        "description": "Wählen Sie die Person, auf die Werner aufpassen soll. Name und Handy findet Werner selbst – Sie können beides hier ändern.\n\nDanach steht „Mein Zuhause“ in der Seitenleiste. Alles Weitere stellt der Bewohner dort selbst ein: wen Werner informiert, wann er nachfragt, Signal und weitere Bewohner.",
+        "description": "Wählen Sie die Person, für die „Mein Zuhause“ eingerichtet wird. Name und Handy findet Werner selbst – Sie können beides hier ändern.\n\nDanach steht „Mein Zuhause“ in der Seitenleiste, zuerst mit Energie und Einstellungen. Das Warnsystem Werner ist am Anfang aus: Der Bewohner schaltet es unter „Einstellen“ selbst ein, wenn er es möchte – und bestimmt dann, wen Werner informiert und wann er nachfragt.",
         "data": {
           "person": "Für wen?",
           "name": "So spricht Werner die Person an",
@@ -66,7 +66,8 @@
           "asking": "Fragt nach",
           "informed": "Vertrauensperson informiert",
           "help": "Hilfe angefordert",
-          "paused": "Pausiert"
+          "paused": "Pausiert",
+          "off": "Ausgeschaltet"
         }
       },
       "last_activity": {
@@ -74,6 +75,9 @@
       }
     },
     "switch": {
+      "active": {
+        "name": "Werner eingeschaltet"
+      },
       "paused": {
         "name": "Pausiert"
       },

@@ -20,6 +20,7 @@ CONF_NAME = "name"
 CONF_PERSON = "person"
 CONF_NOTIFY = "notify_service"
 # Selbstbestimmung: Werner passt erst auf, wenn der Bewohner selbst zugestimmt hat.
+CONF_START_ACTIVE = "start_active"
 CONF_CONSENT = "consent"
 CONF_CREATED_BY = "created_by"
 SOURCE_UI = "werner_ui"
@@ -82,7 +83,9 @@ STATUS_ASKING = "asking"
 STATUS_INFORMED = "informed"
 STATUS_HELP = "help"
 STATUS_PAUSED = "paused"
-STATUSES = [STATUS_OK, STATUS_ASKING, STATUS_INFORMED, STATUS_HELP, STATUS_PAUSED]
+# Werner (das Warnsystem) ist eine Option, die der Bewohner bewusst einschaltet.
+STATUS_OFF = "off"
+STATUSES = [STATUS_OK, STATUS_ASKING, STATUS_INFORMED, STATUS_HELP, STATUS_PAUSED, STATUS_OFF]
 
 # Wege zu den Vertrauenspersonen
 WAY_OFF = "off"
@@ -96,6 +99,9 @@ PERSON_FIELDS = ("name", "contact", "phone", "e_mail")
 
 # Einstellungen je Bewohner und ihre Standardwerte
 DEFAULT_SETTINGS: dict[str, object] = {
+    # Warnsystem eingeschaltet? Neue Einträge starten ausgeschaltet (CONF_START_ACTIVE),
+    # bestehende Einrichtungen bleiben eingeschaltet.
+    "active": True,
     "paused": False,
     "rule_morning": True,
     "rule_quiet": True,
