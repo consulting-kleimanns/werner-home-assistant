@@ -11,10 +11,10 @@
  * können zwischen den Bewohnern umschalten. Alle Werte kommen aus den Entitäten
  * der Integration; was nicht eingerichtet ist, wird ausgeblendet oder zeigt „–“.
  */
-const WERNER_UI_VERSION = '1.1.0';
+const WERNER_UI_VERSION = '1.1.1';
 
 const C = {
-  bg: '#F5F2EA', ink: '#1E2421', muted: '#55605A', line: '#E2DDD1', blue: '#1F4E79', blueBg: '#E6EEF6', blueInk: '#12324F',
+  bg: '#F2F2FA', ink: '#0B0620', muted: '#5B5670', line: '#DCD9EE', blue: '#381D92', blueBg: '#E4DEFA', blueInk: '#24105F',
   green: '#2E6B4F', red: '#A3261D'
 };
 
@@ -40,17 +40,17 @@ h1.big{font-size:30px}
 .ok{background:#E3F0E8;border:1px solid #BFD9C9;color:#1F4D38}
 .warn{background:#FBEBD6;border:1px solid #E8C79B;color:#6E3B0B}
 .err{background:#FBE3E0;border:1px solid #E9B3AD;color:#7A1C15}
-.grey{background:#EFEBE2;border:1px solid #C9C3B5;color:#3E4541}
-.info{background:${C.blueBg};border:1px solid #C3D3E6;color:${C.blueInk}}
+.grey{background:#ECEBF5;border:1px solid #BDB8D6;color:#3B3654}
+.info{background:${C.blueBg};border:1px solid #CFC6F5;color:${C.blueInk}}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .tile{text-align:left;background:#FFF;border:1px solid ${C.line};border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:6px;color:${C.ink};min-height:120px}
 .tile .l{font-size:15px;color:${C.muted}}.tile .v{font-size:32px;font-weight:700}.tile .s{font-size:15px;color:${C.muted}}
 .mini{background:#FFF;border:1px solid ${C.line};border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:4px}
 .mini .v{font-size:26px;font-weight:700}
-.bar{display:block;height:10px;border-radius:5px;background:#E6E1D6;overflow:hidden}.bar>span{display:block;height:100%;background:${C.green}}
+.bar{display:block;height:10px;border-radius:5px;background:#E1DEF0;overflow:hidden}.bar>span{display:block;height:100%;background:${C.green}}
 .pill{align-self:flex-start;min-height:48px;border-radius:24px;padding:0 18px;font-size:16px;font-weight:700}
 .pill.red{border:none;background:${C.red};color:#FFF}
-.btn{min-height:56px;border-radius:16px;font-size:17px;font-weight:700;border:1px solid #C9C3B5;background:#FFF;color:${C.ink};padding:0 14px}
+.btn{min-height:56px;border-radius:16px;font-size:17px;font-weight:700;border:1px solid #BDB8D6;background:#FFF;color:${C.ink};padding:0 14px}
 .btn.blue{border:none;background:${C.blue};color:#FFF}
 .btn.green{border:none;background:${C.green};color:#FFF}
 .btn.red{border:none;background:${C.red};color:#FFF;min-height:60px;font-size:20px}
@@ -61,15 +61,15 @@ h1.big{font-size:30px}
 .day{flex-shrink:0;width:96px;min-height:120px;border-radius:16px;padding:10px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid ${C.line};background:#FFF;color:${C.ink}}
 .day.good{background:#FBF1D9;color:#5A3E05}.day.sel{border:3px solid ${C.blue}}
 .log{display:flex;gap:12px;font-size:16px;align-items:baseline}.log b{width:52px;flex-shrink:0}
-.sub{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;background:#E9E4D8;border-radius:16px;padding:5px}
-.sub button{min-height:48px;border-radius:12px;border:none;font-size:15px;padding:0 2px;background:transparent;color:#3E4541}
+.sub{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;background:#E4E1F2;border-radius:16px;padding:5px}
+.sub button{min-height:48px;border-radius:12px;border:none;font-size:15px;padding:0 2px;background:transparent;color:#3B3654}
 .sub button.on{background:#FFF;color:${C.blueInk};font-weight:700}
 .nr{width:38px;height:38px;flex-shrink:0;border-radius:19px;background:${C.blue};color:#FFF;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .row{display:flex;align-items:center;gap:12px}.between{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .ch{min-height:48px;border-radius:12px;border:1px solid ${C.line};background:#FFF;color:${C.muted};font-size:16px}
 .ch.on{border:2px solid ${C.blue};background:${C.blueBg};color:${C.blueInk};font-weight:700}
-.sw{width:64px;height:38px;flex-shrink:0;border-radius:19px;border:none;padding:4px;display:flex;background:#C9C3B5;justify-content:flex-start}
+.sw{width:64px;height:38px;flex-shrink:0;border-radius:19px;border:none;padding:4px;display:flex;background:#BDB8D6;justify-content:flex-start}
 .sw.on{background:${C.green};justify-content:flex-end}.sw>span{display:block;width:30px;height:30px;border-radius:15px;background:#FFF}
 .pm{width:52px;height:52px;border-radius:14px;border:1px solid ${C.line};background:#FFF;color:${C.ink};font-size:24px}
 .val{flex-grow:1;text-align:center;font-size:20px;font-weight:700}
@@ -79,7 +79,7 @@ h1.big{font-size:30px}
 .edit{min-height:52px;border-radius:12px;border:1px solid ${C.line};background:#FFF;color:${C.blue};font-size:16px;font-weight:700;padding:8px 12px}
 .link{min-height:48px;padding:0 14px;border-radius:12px;border:1px solid ${C.line};background:#FFF;color:${C.red};font-size:15px}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:14px;color:${C.muted}}
-label.f input,label.f select{min-height:48px;border:1px solid #C9C3B5;border-radius:12px;padding:0 12px;font-size:16px;color:${C.ink};background:#FBFAF7;width:100%}
+label.f input,label.f select{min-height:48px;border:1px solid #BDB8D6;border-radius:12px;padding:0 12px;font-size:16px;color:${C.ink};background:#FFFFFF;width:100%}
 .mode{text-align:left;min-height:84px;border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;border:1px solid ${C.line};background:#FFF;color:${C.ink}}
 .mode.on{border:3px solid ${C.blue};background:${C.blueBg};color:${C.blueInk}}
 nav{flex-shrink:0;padding:8px 6px calc(14px + env(safe-area-inset-bottom));background:#FFF;border-top:1px solid ${C.line};display:grid;gap:4px}
@@ -559,7 +559,7 @@ ${devices.map((g) => `<div class="card" style="padding:14px;gap:6px"><div class=
       const pos = cur <= L[0] ? cur / L[0] * 25 : cur <= L[1] ? 25 + (cur - L[0]) / (L[1] - L[0]) * 25 : cur <= L[2] ? 50 + (cur - L[1]) / (L[2] - L[1]) * 25 : 75 + Math.min(1, (cur - L[2]) / 100) * 25;
       scale = `<div style="display:flex;flex-direction:column;gap:6px"><div class="small">Wo Sie stehen (Watt, rund um die Uhr)</div>
 <div style="position:relative;height:44px" role="img" aria-label="Grundverbrauch ${Math.round(cur)} Watt, Stufe ${esc(names[g.level] || '')}"><div style="position:absolute;left:0;right:0;top:14px;height:16px;border-radius:8px;overflow:hidden;display:flex"><span style="flex:0 0 25%;background:${C.green}"></span><span style="flex:0 0 25%;background:#8DBFA3"></span><span style="flex:0 0 25%;background:#E8C79B"></span><span style="flex:1 1 auto;background:#D9A39C"></span></div><div style="position:absolute;top:4px;width:8px;height:36px;margin-left:-4px;border-radius:4px;background:${C.ink};left:${Math.min(100, pos).toFixed(1)}%"></div></div>
-<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));font-size:13px;color:#3E4541"><span>sehr gut<br>bis ${L[0]}</span><span>gut<br>bis ${L[1]}</span><span>mittel<br>bis ${L[2]}</span><span>hoch<br>über ${L[2]}</span></div></div>`;
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));font-size:13px;color:#3B3654"><span>sehr gut<br>bis ${L[0]}</span><span>gut<br>bis ${L[1]}</span><span>mittel<br>bis ${L[2]}</span><span>hoch<br>über ${L[2]}</span></div></div>`;
     }
     const weeks = (g.weeks || []).slice(-8); const shown = weeks.filter((w) => w.w != null);
     let bars = '';
@@ -568,7 +568,7 @@ ${devices.map((g) => `<div class="card" style="padding:14px;gap:6px"><div class=
       const lc = (x) => x <= L[0] ? C.green : x <= L[1] ? '#8DBFA3' : x <= L[2] ? '#D9A85C' : '#C2554B';
       const lab = (w, i) => i === weeks.length - 1 ? 'diese' : new Date(w.end).toLocaleDateString('de-DE', { day: 'numeric', month: 'numeric' });
       bars = `<div style="display:flex;flex-direction:column;gap:6px"><div class="small">Die letzten Wochen</div>
-<div style="display:flex;align-items:flex-end;gap:6px;height:112px;border-bottom:2px solid ${C.line}">${weeks.map((w, i) => `<div style="flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:110px">${w.w == null ? '<span style="font-size:12px;color:#55605A">–</span>' : `<span style="font-size:12px;font-weight:700">${w.w}</span><span style="display:block;width:100%;max-width:30px;border-radius:5px 5px 0 0;background:${lc(w.w)};height:${Math.round(w.w / max * 84 + 4)}px${i === weeks.length - 1 ? `;outline:2px solid ${C.ink};outline-offset:1px` : ''}"></span>`}</div>`).join('')}</div>
+<div style="display:flex;align-items:flex-end;gap:6px;height:112px;border-bottom:2px solid ${C.line}">${weeks.map((w, i) => `<div style="flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:110px">${w.w == null ? '<span style="font-size:12px;color:#5B5670">–</span>' : `<span style="font-size:12px;font-weight:700">${w.w}</span><span style="display:block;width:100%;max-width:30px;border-radius:5px 5px 0 0;background:${lc(w.w)};height:${Math.round(w.w / max * 84 + 4)}px${i === weeks.length - 1 ? `;outline:2px solid ${C.ink};outline-offset:1px` : ''}"></span>`}</div>`).join('')}</div>
 <div style="display:flex;gap:6px">${weeks.map((w, i) => `<span style="flex:1 1 0;text-align:center;font-size:12px;color:${C.muted}">${esc(lab(w, i))}</span>`).join('')}</div></div>`;
     }
     const winNames = { minus_10: 'Erstmals 10 Watt weniger', good: 'Stufe „gut“ erreicht', very_good: 'Stufe „sehr gut“ erreicht', held_4: '4 Wochen sehr gut gehalten', held_12: '3 Monate sehr gut gehalten' };
@@ -626,11 +626,11 @@ ${scale}${bars}${goal}
       const p = ch.price.points; const fut = p.filter((x) => new Date(x.t).getTime() + 3600000 > now);
       const vals = fut.map((x) => x.v).sort((a, b) => a - b); const lo = vals[Math.floor(vals.length / 3)] ?? 0; const hi = vals[Math.floor(vals.length * 2 / 3)] ?? 0;
       const cur = fut[0]; const cheap = fut.slice().sort((a, b) => a.v - b.v)[0]; const dear = fut.slice().sort((a, b) => b.v - a.v)[0];
-      const bars = p.map((x) => ({ t: x.t, v: x.v, faint: new Date(x.t).getTime() + 3600000 <= now, color: x.v <= lo ? C.green : x.v >= hi ? C.red : '#8A9A91' }));
+      const bars = p.map((x) => ({ t: x.t, v: x.v, faint: new Date(x.t).getTime() + 3600000 <= now, color: x.v <= lo ? C.green : x.v >= hi ? C.red : '#8C88A6' }));
       out.push(`<section class="card" aria-label="Strompreis"><div class="between" style="align-items:baseline"><span class="t-m">Strompreis</span>${cur ? `<span style="font-size:22px;font-weight:700">${fmtNum(cur.v, 'ct', 0)}</span>` : ''}</div>
 <div class="txt">${cheap ? `Am günstigsten: <b>${esc(this._when(cheap.t))}</b> (${fmtNum(cheap.v, 'ct')}).` : ''} ${dear ? `Am teuersten: ${esc(this._when(dear.t))} (${fmtNum(dear.v, 'ct')}).` : ''}</div>
 ${this._bars(bars, { unit: 'ct', label: 'Strompreis je Stunde' })}
-${this._legend([[C.green, 'günstig'], ['#8A9A91', 'mittel'], [C.red, 'teuer']])}
+${this._legend([[C.green, 'günstig'], ['#8C88A6', 'mittel'], [C.red, 'teuer']])}
 <div class="small">${esc(ch.price.label)} in Cent je kWh${p.length && new Date(p[p.length - 1].t).getDate() === new Date().getDate() ? ' · Preise für morgen kommen gegen 13 Uhr' : ''}.</div></section>`);
     }
     if (ch.pv && ch.pv.points.length) {
@@ -723,7 +723,7 @@ ${this._setupCard(false)}<div class="sub" role="tablist" aria-label="Bereiche">$
     ];
     return `<details class="card" style="padding:14px"><summary style="font-size:17px;font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center">So sieht eine Nachricht an ${esc(p.name)} aus</summary>
 <div class="small" style="margin:6px 0 8px">Beispiel: Sie haben sich morgens nicht gerührt und auf Werners Frage nicht geantwortet.</div>
-<div style="white-space:pre-wrap;font-size:16px;line-height:1.45;background:#F6F3EC;border-radius:12px;padding:12px">${esc(lines.join('\n'))}</div></details>`;
+<div style="white-space:pre-wrap;font-size:16px;line-height:1.45;background:#F7F7FC;border-radius:12px;padding:12px">${esc(lines.join('\n'))}</div></details>`;
   }
 
   _wer() {
@@ -780,7 +780,7 @@ ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" da
     const r = this._r;
     const p = this._h.states[r.attributes.person];
     const home = p ? p.state === 'home' : false;
-    const card = (title, text, badge, ok, toggle) => `<div class="card" style="padding:14px 16px;gap:6px"><div class="between"><span class="t-m">${esc(title)}</span>${toggle || ''}</div><div style="font-size:15px;line-height:1.4;color:#3E4541">${esc(text)}</div><span class="badge ${ok === true ? 'ok' : ok === false ? 'warn' : 'grey'}">${esc(badge)}</span></div>`;
+    const card = (title, text, badge, ok, toggle) => `<div class="card" style="padding:14px 16px;gap:6px"><div class="between"><span class="t-m">${esc(title)}</span>${toggle || ''}</div><div style="font-size:15px;line-height:1.4;color:#3B3654">${esc(text)}</div><span class="badge ${ok === true ? 'ok' : ok === false ? 'warn' : 'grey'}">${esc(badge)}</span></div>`;
     let html = `<div class="txt">Woran Werner Ihren Tag erkennt.</div>`;
     html += card('Ihr Handy: zu Hause oder unterwegs', 'Sind Sie unterwegs, schweigt Werner.', p ? (home ? 'Gerade: zu Hause' : 'Gerade: unterwegs') : 'Nicht verbunden', p ? true : false);
     html += this._sourcesBlock();
@@ -789,7 +789,7 @@ ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" da
       html += card(title, text, on ? 'An – mit Ihrer Zustimmung' : 'Aus – nur mit Ihrer Zustimmung', on ? true : null,
         `<button type="button" class="sw ${on ? 'on' : ''}" role="switch" aria-checked="${on}" aria-label="${title}" data-consent="${key}"><span></span></button>`);
     }
-    html += `<div class="card" style="padding:14px 16px;gap:8px"><span class="t-m">Ihre Daten gehören Ihnen</span><div style="font-size:15px;line-height:1.4;color:#3E4541">Alles bleibt in Ihrem Haus. Sie sehen jederzeit, was Werner über Sie weiß.</div><button type="button" class="btn" style="min-height:52px;color:${C.blue}" data-act="data">Ansehen</button></div>`;
+    html += `<div class="card" style="padding:14px 16px;gap:8px"><span class="t-m">Ihre Daten gehören Ihnen</span><div style="font-size:15px;line-height:1.4;color:#3B3654">Alles bleibt in Ihrem Haus. Sie sehen jederzeit, was Werner über Sie weiß.</div><button type="button" class="btn" style="min-height:52px;color:${C.blue}" data-act="data">Ansehen</button></div>`;
     return html + `<div class="small">${esc(this._sensorNote())}</div>`;
   }
 
@@ -820,14 +820,14 @@ ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" da
     for (const [g, title, text] of groups) {
       const items = s.candidates.filter((c) => c.group === g);
       if (!items.length) continue; any = true;
-      html += `<div style="border-top:1px solid #EFEBE2;padding-top:10px;display:flex;flex-direction:column;gap:8px"><div><div style="font-size:17px;font-weight:700">${title}</div><div class="small">${text}</div></div>`;
+      html += `<div style="border-top:1px solid #ECEBF5;padding-top:10px;display:flex;flex-direction:column;gap:8px"><div><div style="font-size:17px;font-weight:700">${title}</div><div class="small">${text}</div></div>`;
       html += items.map((c) => { const on = chosen.has(c.entity_id); const val = fmtState(this._h.states[c.entity_id]); const sub = [c.area, 'gerade: ' + val].filter(Boolean).join(' · '); return `<div class="between"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:16px">${esc(c.name)}</span><span class="small">${esc(sub)}</span></span><button type="button" class="sw ${on ? 'on' : ''}" role="switch" aria-checked="${on}" aria-label="${esc(c.name)}" data-src="${esc(c.entity_id)}"><span></span></button></div>`; }).join('');
       html += '</div>';
     }
     if (!any) html += `<div class="box warn"><div class="txt">Werner hat keine passenden Geräte gefunden. Ein Helfer kann einen Stromzähler oder Bewegungsmelder anschließen – auswählen können Sie ihn dann hier selbst.</div></div>`;
     if (s.candidates.some((c) => c.group === 'strom' && chosen.has(c.entity_id))) {
       const b = Math.round(Number(s.baseload_w) || 0);
-      html += `<div style="border-top:1px solid #EFEBE2;padding-top:10px;display:flex;flex-direction:column;gap:8px"><div style="font-size:17px;font-weight:700">Grundlast</div><div class="small">Bis zu diesem Verbrauch gilt es als still – Kühlschrank und Standby laufen ja immer.</div><div class="row" style="gap:10px"><button type="button" class="pm" aria-label="Weniger" data-base="-50">–</button><span class="val">${b} W</span><button type="button" class="pm" aria-label="Mehr" data-base="50">+</button></div></div>`;
+      html += `<div style="border-top:1px solid #ECEBF5;padding-top:10px;display:flex;flex-direction:column;gap:8px"><div style="font-size:17px;font-weight:700">Grundlast</div><div class="small">Bis zu diesem Verbrauch gilt es als still – Kühlschrank und Standby laufen ja immer.</div><div class="row" style="gap:10px"><button type="button" class="pm" aria-label="Weniger" data-base="-50">–</button><span class="val">${b} W</span><button type="button" class="pm" aria-label="Mehr" data-base="50">+</button></div></div>`;
     }
     if (!chosen.size) html += `<div class="box warn" style="padding:12px 14px"><div class="txt">Noch nichts gewählt. Dann kann Werner nicht merken, ob es ungewöhnlich still ist.</div></div>`;
     return html + this._errBox() + '</section>';
@@ -839,7 +839,7 @@ ${free && this._ui.adding == null ? `<button type="button" class="btn dashed" da
     if (hh.error) return `<div class="box err"><div class="txt">Der Haushalt konnte nicht geladen werden. Ist Werner in der neuesten Version installiert?</div></div>`;
     const others = hh.residents.filter((x) => !x.mine);
     let html = `<section class="card" aria-label="Haushalt"><div class="t-m">Wer im Haushalt Werner nutzt</div>`;
-    html += hh.residents.length ? hh.residents.map((x) => `<div class="between" style="border-top:1px solid #EFEBE2;padding-top:10px"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:700">${esc(x.name)}${x.mine ? ' (Sie)' : ''}</span><span class="small">${x.consent ? 'Werner passt auf' : 'Wartet auf Zustimmung von ' + esc(x.name)}</span></span>${!x.mine && x.may_remove ? `<button type="button" class="link" data-remove-res="${esc(x.entry_id)}">${x.consent ? 'Entfernen' : 'Zurücknehmen'}</button>` : ''}</div>`).join('') : '<div class="muted">Noch niemand.</div>';
+    html += hh.residents.length ? hh.residents.map((x) => `<div class="between" style="border-top:1px solid #ECEBF5;padding-top:10px"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:700">${esc(x.name)}${x.mine ? ' (Sie)' : ''}</span><span class="small">${x.consent ? 'Werner passt auf' : 'Wartet auf Zustimmung von ' + esc(x.name)}</span></span>${!x.mine && x.may_remove ? `<button type="button" class="link" data-remove-res="${esc(x.entry_id)}">${x.consent ? 'Entfernen' : 'Zurücknehmen'}</button>` : ''}</div>`).join('') : '<div class="muted">Noch niemand.</div>';
     html += `<div class="small">Jeder sieht nur seine eigenen Einstellungen und sein eigenes Protokoll.${others.length ? ' Von den anderen sehen Sie nur den Namen.' : ''}</div></section>`;
     if (!withAdd) return html;
     const free = hh.persons.filter((p) => !p.taken && (p.has_login || hh.is_admin));
@@ -1162,7 +1162,7 @@ ${this._errBox()}<button type="button" class="btn blue" data-act="mail-save" ${t
       ['Kamera und Mikrofon', cm.length ? 'An: ' + cm.join(' und ') + ' – nur Erkennung, keine Aufnahmen' : 'Aus']
     ];
     return this._sheet('Was Werner über Sie weiß', `<div style="font-size:26px;font-weight:700;line-height:1.2">Was Werner über Sie weiß</div>
-${items.map((x) => `<div style="display:flex;flex-direction:column;gap:2px;border-top:1px solid #EFEBE2;padding-top:10px"><span class="small">${esc(x[0])}</span><span style="font-size:17px;font-weight:700;line-height:1.35">${esc(x[1])}</span></div>`).join('')}
+${items.map((x) => `<div style="display:flex;flex-direction:column;gap:2px;border-top:1px solid #ECEBF5;padding-top:10px"><span class="small">${esc(x[0])}</span><span style="font-size:17px;font-weight:700;line-height:1.35">${esc(x[1])}</span></div>`).join('')}
 <div class="box ok" style="padding:12px 14px"><div class="txt">Alles bleibt in Ihrem Haus. Ihre Vertrauenspersonen sehen nur Meldungen.</div></div>
 <div class="small">Das Löschen des Protokolls kommt in einer der nächsten Versionen.</div>
 <button type="button" class="btn blue" data-act="close">Schließen</button>`);
@@ -1318,4 +1318,4 @@ window.customCards = window.customCards || [];
 if (!window.customCards.find((c) => c.type === 'werner-mein-zuhause')) {
   window.customCards.push({ type: 'werner-mein-zuhause', name: 'Werner – Mein Zuhause', description: 'Einfache Bildschirme für Senioren: Start, Werner, Energie, Auto, Einstellen.' });
 }
-console.info('%c Werner – Mein Zuhause ' + WERNER_UI_VERSION, 'color:#1F4E79;font-weight:bold');
+console.info('%c Werner – Mein Zuhause ' + WERNER_UI_VERSION, 'color:#381D92;font-weight:bold');
