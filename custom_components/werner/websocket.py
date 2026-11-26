@@ -21,7 +21,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 
-from .charts import async_charts, price_entries, pv_forecasts
+from .charts import async_charts, async_mean_price, price_entries, pv_forecasts
 from .solar import SolarError, async_remove_plane, async_set_plane, plane_of
 from .geraete import describe, suggest_notify
 from .mail import SECURITY_SSL, SECURITY_STARTTLS, MailError, get_mail
@@ -64,6 +64,7 @@ def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_energy)
     websocket_api.async_register_command(hass, ws_set_energy)
     websocket_api.async_register_command(hass, ws_charts)
+    websocket_api.async_register_command(hass, ws_baseload)
     websocket_api.async_register_command(hass, ws_pv_set)
     websocket_api.async_register_command(hass, ws_pv_remove)
     websocket_api.async_register_command(hass, ws_signal_status)
@@ -642,6 +643,23 @@ async def ws_charts(hass: HomeAssistant, connection: websocket_api.ActiveConnect
         connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst sehen.")
         return
     connection.send_result(msg["id"], await async_charts(hass, entry))
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): "werner/baseload", vol.Required("entry_id"): str}
+)
+@websocket_api.async_response
+async def ws_baseload(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Grundverbrauch: Wochenwerte, Stufe, Ziel und Erfolge."""
+    entry = _entry(hass, msg["entry_id"])
+    if entry is None or not (connection.user.is_admin or _is_own(hass, entry, connection.user.id)):
+        connection.send_error(msg["id"], ERR_NOT_ALLOWED, "Das dürfen nur Sie selbst sehen.")
+        return
+    gv = getattr(entry.runtime_data, "grundverbrauch", None)
+    if gv is None:
+        connection.send_result(msg["id"], {"configured": False})
+        return
+    connection.send_result(msg["id"], await gv.async_model(await async_mean_price(hass, entry)))
 
 
 @websocket_api.websocket_command(
