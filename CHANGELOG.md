@@ -1,5 +1,14 @@
 # Änderungen
 
+## 1.1.0 – 2026-11-26
+
+- **Grundverbrauch statt Zählerstand.** „Mein Zuhause“ › Energie zeigt, was rund um die Uhr läuft – gemessen nachts zwischen 1 und 5 Uhr, nur in Nächten, in denen der Bewohner zu Hause ist (Urlaub zählt nicht).
+- **Anerkennen statt antreiben:** Werner zeigt, wie viel seit dem Ausgangswert eingespart ist (Watt und Euro im Jahr), und vergibt Erfolge, die bleiben – etwa „Erstmals 10 Watt weniger“ oder „Stufe sehr gut erreicht“.
+- Stufen für einen 1-Personen-Haushalt: sehr gut bis 60 W, gut bis 100 W, mittel bis 150 W. Werner schlägt nur kleine Schritte vor (etwa 10 Prozent). Ab „sehr gut“ gibt es kein neues Ziel mehr, nur „Halten genügt“; unter das, was dauernd laufen muss, setzt Werner nie ein Ziel.
+- Steigt der Grundverbrauch merklich, gibt es einen freundlichen Hinweis. Bleibt er vier Wochen oben, gilt er als neuer Normalfall.
+- Euro-Beträge mit dem mittleren Nord-Pool-Preis, sonst mit 30 ct je kWh.
+- Eine von Werner angelegte „Solaranlage (Werner)“ wird nach einer Neueinrichtung wieder als eigene Anlage erkannt.
+
 ## 1.0.0 – 2026-11-25
 
 - **Werner ist eine Option.** „Mein Zuhause“ startet mit Energie und Einstellungen. Das Warnsystem Werner ist bei neuen Einrichtungen ausgeschaltet; der Bewohner schaltet es unter „Einstellen“ bewusst ein („Werner einschalten“, mit Erklärung in einfacher Sprache) und kann es dort jederzeit wieder ausschalten. Die Einstellungen bleiben dabei erhalten.
